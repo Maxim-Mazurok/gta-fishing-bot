@@ -120,32 +120,45 @@ class BarDetector:
         if len(blue_cols) < 5:
             return False
 
-        # Find the main continuous group of blue columns
+        # Find continuous groups of blue columns
         diffs = np.diff(blue_cols)
         splits = np.where(diffs > 5)[0]
         groups = np.split(blue_cols, splits + 1)
-        # Pick the largest group
-        main_group = max(groups, key=len)
-        if len(main_group) < 10:
+
+        # The fishing column is a narrow vertical strip (~20-80px wide).
+        # Filter out groups that are too wide (sky, UI) or too narrow.
+        # Also validate that the group is much taller than wide (aspect ratio).
+        best_group = None
+        best_height = 0
+        for grp in groups:
+            width = grp[-1] - grp[0] + 1
+            if width < 10 or width > 100:
+                continue
+            # Check vertical extent for this group
+            strip_hsv = hsv[:, grp[0]:grp[-1] + 1]
+            h_mask = (
+                (strip_hsv[:, :, 0] >= 80) &
+                (strip_hsv[:, :, 0] <= 115) &
+                (strip_hsv[:, :, 1] > 40)
+            ).astype(np.uint8)
+            rs = np.sum(h_mask, axis=1)
+            rows = np.where(rs > width * 0.3)[0]
+            if len(rows) < 50:
+                continue
+            height = rows[-1] - rows[0]
+            # Column must be tall and narrow (aspect ratio > 3:1)
+            if height < width * 3:
+                continue
+            if height > best_height:
+                best_height = height
+                best_group = (grp, rows)
+
+        if best_group is None:
             return False
 
+        main_group, bar_rows = best_group
         x1 = main_group[0]
         x2 = main_group[-1]
-
-        # Find vertical extent within those columns
-        # Use hue-based detection (H=80-115, S>40) to include the darker bottom
-        # portion of the bar (3D tube effect) that the brightness-based blue_mask misses
-        col_strip_hsv = hsv[:, x1:x2 + 1]
-        hue_mask = (
-            (col_strip_hsv[:, :, 0] >= 80) &
-            (col_strip_hsv[:, :, 0] <= 115) &
-            (col_strip_hsv[:, :, 1] > 40)
-        ).astype(np.uint8)
-        row_sums = np.sum(hue_mask, axis=1)
-        bar_rows = np.where(row_sums > (x2 - x1) * 0.3)[0]
-        if len(bar_rows) < 50:
-            return False
-
         y1 = bar_rows[0]
         y2 = bar_rows[-1]
 
@@ -364,8 +377,8 @@ class ScreenCapture:
 
     def capture_search_region(self):
         """Capture center region for initial bar search."""
-        cx = self._monitor['width'] // 2
-        cy = self._monitor['height'] // 2
+        cx = self._monitor['left'] + self._monitor['width'] // 2
+        cy = self._monitor['top'] + self._monitor['height'] // 2
         region = {
             'left': cx - SEARCH_MARGIN_X,
             'top': cy - SEARCH_MARGIN_Y,
@@ -527,9 +540,9 @@ def run_automation(debug=False):
             # Capture bar region
             try:
                 img, region = capture.capture_bar_region(detector)
-            except Exception:
+            except Exception as e:
                 # Bar might have moved or disappeared
-                print("[!] Capture failed, re-searching...")
+                print(f"[!] Capture failed ({e}), re-searching...")
                 detector.bar_found = False
                 state = GameState.WAITING
                 if controller.space_held:
