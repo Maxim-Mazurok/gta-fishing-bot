@@ -449,7 +449,22 @@ class GameState:
     CAUGHT = 'CAUGHT'
 
 
-def run_automation(debug=False):
+def _setup_topmost_window(window_name):
+    """Make an OpenCV window always-on-top using Win32 API."""
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = user32.FindWindowW(None, window_name)
+        if hwnd:
+            HWND_TOPMOST = -1
+            SWP_NOMOVE = 0x0002
+            SWP_NOSIZE = 0x0001
+            user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+    except Exception:
+        pass
+
+
+def run_automation(debug=False, reel_only=False):
     """Main automation loop."""
     global pydirectinput
     import pydirectinput as pdi
@@ -477,9 +492,15 @@ def run_automation(debug=False):
     signal.signal(signal.SIGINT, signal_handler)
 
     print("[*] Fishing automation started")
+    if reel_only:
+        print("[*] Reel-only mode: searching for minigame bar...")
     print("[*] Move mouse to top-left corner to abort (FAILSAFE)")
     if debug:
         print("[*] Debug visualization enabled - press 'q' in window to quit")
+        cv2.namedWindow('Fishing Bot', cv2.WINDOW_AUTOSIZE)
+        _setup_topmost_window('Fishing Bot')
+
+    topmost_set = False
 
     control_interval = 1.0 / CONTROL_HZ
 
@@ -491,13 +512,20 @@ def run_automation(debug=False):
         now = time.perf_counter()
 
         if state == GameState.IDLE:
-            print(f"\n[{catches}] Casting...")
-            pydirectinput.press('2')
-            state = GameState.WAITING
-            state_start = now
-            detector.bar_found = False
-            controller.reset()
-            time.sleep(1.0)
+            if reel_only:
+                # Skip casting, go straight to searching for the bar
+                state = GameState.WAITING
+                state_start = now
+                detector.bar_found = False
+                controller.reset()
+            else:
+                print(f"\n[{catches}] Casting...")
+                pydirectinput.press('2')
+                state = GameState.WAITING
+                state_start = now
+                detector.bar_found = False
+                controller.reset()
+                time.sleep(1.0)
 
         elif state == GameState.WAITING:
             # Poll for the minigame bar to appear
@@ -529,10 +557,16 @@ def run_automation(debug=False):
                                 (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
                     show = cv2.resize(vis, (600, 500))
                     cv2.imshow('Fishing Bot', show)
+                    if not topmost_set:
+                        _setup_topmost_window('Fishing Bot')
+                        topmost_set = True
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         running = False
                         break
-                time.sleep(CAST_WAIT_POLL)
+                if reel_only:
+                    time.sleep(0.1)  # Fast poll in reel mode
+                else:
+                    time.sleep(CAST_WAIT_POLL)
 
         elif state == GameState.MINIGAME:
             loop_start = time.perf_counter()
@@ -640,9 +674,13 @@ def run_automation(debug=False):
                 time.sleep(sleep_time)
 
         elif state == GameState.CAUGHT:
-            print(f"[*] Total catches: {catches}. Waiting {CAST_DELAY}s before next cast...")
-            time.sleep(CAST_DELAY)
-            state = GameState.IDLE
+            if reel_only:
+                print(f"[*] Total catches: {catches}. Reel-only mode, returning to search...")
+                state = GameState.IDLE
+            else:
+                print(f"[*] Total catches: {catches}. Waiting {CAST_DELAY}s before next cast...")
+                time.sleep(CAST_DELAY)
+                state = GameState.IDLE
 
     # Cleanup
     if controller.space_held:
@@ -797,10 +835,11 @@ def run_test(image_path, debug=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GTA RP Fishing Bot')
     parser.add_argument('--debug', action='store_true', help='Show debug visualization')
+    parser.add_argument('--reel', action='store_true', help='Reel-only mode: skip casting, just search for minigame and play it')
     parser.add_argument('--test', type=str, help='Test detection on image file or frame directory')
     args = parser.parse_args()
 
     if args.test:
         run_test(args.test, debug=True)
     else:
-        run_automation(debug=args.debug)
+        run_automation(debug=args.debug, reel_only=args.reel)
