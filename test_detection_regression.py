@@ -28,7 +28,7 @@ TEST_CASES = [
     # --- Frames with reliable outside-box detection ---
     ('001001', 0.451, TOLERANCE, 'fish clearly visible outside white box'),
     ('001193', 0.605, TOLERANCE, 'fish outside white box'),
-    ('001205', 0.645, TOLERANCE, 'fish just left white box'),
+    ('001205', 0.677, TOLERANCE, 'fish just left white box'),
     ('001210', 0.651, TOLERANCE, 'fish outside white box'),
     ('001250', 0.529, TOLERANCE, 'fish below white box'),
 

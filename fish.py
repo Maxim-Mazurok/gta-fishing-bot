@@ -27,6 +27,7 @@ Usage:
 """
 
 import sys
+import os
 import time
 import signal
 import argparse
@@ -56,7 +57,6 @@ WHITE_BOX_SAT_THRESHOLD = 55
 
 # Fishscale detection: brightness drop from local average
 FISH_BRIGHTNESS_DROP = 12  # pixels darker than row average to count
-FISH_MIN_CLUSTER_SIZE = 3   # minimum rows to form a fishscale cluster
 
 # Progress bar: red/orange fill detection
 PROGRESS_H_MIN, PROGRESS_H_MAX = 0, 12
@@ -68,8 +68,12 @@ HYSTERESIS = 0.08  # normalized band (fraction of bar height)
 
 # Game loop timing
 CAST_DELAY = 3.0       # seconds to wait after catch before recasting
+BITE_WAIT = 120.0      # seconds to wait for bite before starting to look for minigame
+MINIGAME_GRACE = 5.0   # seconds after minigame start before allowing catch detection
 CAST_WAIT_POLL = 2.0   # seconds between polls while waiting for bite
+BAR_APPEAR_DELAY = 5.0 # extra seconds after BITE_WAIT for bar to fully appear
 CONTROL_HZ = 60        # control loop frequency during minigame
+BAR_REDETECT_INTERVAL = 3.0  # seconds between bar position re-detection
 
 # ─── Detection ──────────────────────────────────────────────────────────
 
@@ -111,9 +115,9 @@ class BarDetector:
         # Try progressively lower V thresholds until valid bar groups are found.
         # Higher V thresholds are preferred as they better separate the bar
         # from blue sky in daytime scenes.
-        img_w = img.shape[1]
-        min_bar_width = max(5, int(img_w * 0.003))    # ~0.3% of width
-        max_bar_width = max(50, int(img_w * 0.05))     # ~5% of width
+        img_h, img_w = img.shape[:2]
+        min_bar_width = max(2, int(img_w * 0.01))     # ~1.0% of width
+        max_bar_width = max(10, int(img_w * 0.05))     # ~5% of width
 
         best_group = None
         best_bright_score = 0
@@ -125,14 +129,15 @@ class BarDetector:
                 np.array([BLUE_H_MAX, 255, 255])
             )
             bright_col_sums = np.sum(bright_mask > 0, axis=0)
-            min_bright = max(5, int(img.shape[0] * 0.02))
+            min_bright = max(2, int(img_h * 0.02))
             bright_cols = np.where(bright_col_sums > min_bright)[0]
-            if len(bright_cols) < 3:
+            if len(bright_cols) < max(2, int(img_w * 0.002)):
                 continue
 
             # Group bright columns
             diffs = np.diff(bright_cols)
-            splits = np.where(diffs > 5)[0]
+            col_gap = max(2, int(img_w * 0.004))  # ~0.4% of width
+            splits = np.where(diffs > col_gap)[0]
             groups = np.split(bright_cols, splits + 1)
 
             for grp in groups:
@@ -154,13 +159,14 @@ class BarDetector:
                     )
                     row_counts = np.sum(row_mask, axis=1)
                     candidate_rows = np.where(row_counts > width * 0.5)[0]
-                    if len(candidate_rows) < 10:
+                    if len(candidate_rows) < max(4, int(img_h * 0.01)):
                         continue
                     cr_diffs = np.diff(candidate_rows)
-                    cr_splits = np.where(cr_diffs > 20)[0]
+                    row_gap = max(4, int(img_h * 0.015))  # ~1.5% of height
+                    cr_splits = np.where(cr_diffs > row_gap)[0]
                     cr_groups = np.split(candidate_rows, cr_splits + 1)
                     largest = max(cr_groups, key=len)
-                    min_rows = max(20, int(img.shape[0] * 0.04))
+                    min_rows = max(8, int(img_h * 0.12))
                     if len(largest) >= min_rows:
                         bar_y1 = int(largest[0])
                         bar_y2 = int(largest[-1])
@@ -169,7 +175,7 @@ class BarDetector:
                 if bar_y1 < 0:
                     continue
                 height = bar_y2 - bar_y1
-                if height < width * 3:
+                if height < width * 8:
                     continue
                 if bright_score > best_bright_score:
                     best_bright_score = bright_score
@@ -196,8 +202,9 @@ class BarDetector:
         self.col_y2 = y2
 
         # Progress bar is immediately to the right of the blue column
+        bar_width = x2 - x1 + 1
         self.prog_x1 = x2 + 1
-        self.prog_x2 = x2 + 20  # approximately 16-20px wide
+        self.prog_x2 = x2 + max(4, int(bar_width * 0.6))  # ~60% of bar width
 
         self.bar_found = True
         return True
@@ -225,7 +232,7 @@ class BarDetector:
 
         col_img = img[cy1:cy2, cx1:cx2]
         col_h, col_w = col_img.shape[:2]
-        if col_h < 20 or col_w < 3:
+        if col_h < max(8, int(h * 0.02)) or col_w < max(2, int(w * 0.001)):
             return None
 
         hsv = cv2.cvtColor(col_img, cv2.COLOR_BGR2HSV)
@@ -235,13 +242,15 @@ class BarDetector:
         row_sat = np.mean(hsv[:, :, 1].astype(float), axis=1)
         white_rows = np.where(row_sat < WHITE_BOX_SAT_THRESHOLD)[0]
 
-        if len(white_rows) >= 3:
+        min_wb_rows = max(2, int(col_h * 0.01))
+        if len(white_rows) >= min_wb_rows:
             # Find the main continuous cluster
             diffs = np.diff(white_rows)
-            splits = np.where(diffs > 3)[0]
+            wb_gap = max(2, int(col_h * 0.015))  # ~1.5% of bar height
+            splits = np.where(diffs > wb_gap)[0]
             clusters = np.split(white_rows, splits + 1)
             main_cluster = max(clusters, key=len)
-            if len(main_cluster) >= 3:
+            if len(main_cluster) >= min_wb_rows:
                 self.box_top = main_cluster[0] / col_h
                 self.box_bottom = main_cluster[-1] / col_h
                 self.box_center = (self.box_top + self.box_bottom) / 2
@@ -261,22 +270,24 @@ class BarDetector:
 
         # Build a mask of rows that belong to the white box (low saturation)
         white_box_rows = set()
-        if len(white_rows) >= 3:
-            # Expand white box region by a few pixels to exclude transition edges
-            wb_expand = 5
+        if len(white_rows) >= min_wb_rows:
+            # Expand white box region by a fraction of bar height
+            wb_expand = max(2, int(col_h * 0.02))  # ~2% of bar height
             for wr in white_rows:
                 for offset in range(-wb_expand, wb_expand + 1):
                     white_box_rows.add(wr + offset)
 
         # Smooth brightness to reduce noise
-        kernel_size = 5
+        kernel_size = max(3, int(col_h * 0.02))  # ~2% of bar height
+        if kernel_size % 2 == 0:
+            kernel_size += 1
         if len(row_brightness) > kernel_size:
             smoothed = np.convolve(row_brightness, np.ones(kernel_size) / kernel_size, mode='same')
         else:
             smoothed = row_brightness
 
         # Use a larger window to compute local average, then find dips
-        window = min(41, col_h // 3)
+        window = max(5, col_h // 3)
         if window % 2 == 0:
             window += 1
         from scipy.ndimage import uniform_filter1d
@@ -285,7 +296,7 @@ class BarDetector:
 
         # --- Pass 1: detect fish OUTSIDE white box (high-confidence) ---
         dark_rows = np.where(dips < -FISH_BRIGHTNESS_DROP)[0]
-        margin = max(8, int(col_h * 0.05))
+        margin = max(3, int(col_h * 0.05))
         dark_rows = dark_rows[
             (dark_rows > margin) &
             (dark_rows < col_h - margin)
@@ -299,14 +310,17 @@ class BarDetector:
         fish_detected = False
         new_fish_y = None
 
-        if len(dark_rows) >= FISH_MIN_CLUSTER_SIZE:
+        fish_min_cluster = max(2, int(col_h * 0.01))  # ~1% of bar height
+        fish_gap = max(2, int(col_h * 0.02))  # ~2% of bar height
+
+        if len(dark_rows) >= fish_min_cluster:
             dr_diffs = np.diff(dark_rows)
-            dr_splits = np.where(dr_diffs > 5)[0]
+            dr_splits = np.where(dr_diffs > fish_gap)[0]
             dr_clusters = np.split(dark_rows, dr_splits + 1)
             best_cluster = None
             best_dip = 0
             for c in dr_clusters:
-                if len(c) >= FISH_MIN_CLUSTER_SIZE:
+                if len(c) >= fish_min_cluster:
                     cluster_dip = -np.min(dips[c])
                     if cluster_dip > best_dip:
                         best_dip = cluster_dip
@@ -317,34 +331,37 @@ class BarDetector:
                 fish_detected = True
 
         # --- Pass 2: detect fish INSIDE white box (relaxed thresholds) ---
-        if not fish_detected and len(white_rows) >= 3:
+        if not fish_detected and len(white_rows) >= min_wb_rows:
             # Inside white box: sat is low (~20-30), brightness dip is subtle.
             # Strategy: try mean-based detection first (works for moderate cases),
             # then fall back to percentile-based (catches faint fish).
             wb_start = int(self.box_top * col_h)
             wb_end = int(self.box_bottom * col_h)
-            wb_margin = 3
+            wb_margin = max(2, int(col_h * 0.01))  # ~1% of bar height
             wb_inner_start = wb_start + wb_margin
             wb_inner_end = wb_end - wb_margin
+            wb_min_interior = max(3, int(col_h * 0.02))  # ~2% of bar height
 
-            if wb_inner_end > wb_inner_start + 5:
+            if wb_inner_end > wb_inner_start + wb_min_interior:
                 # --- Pass 2a: mean-based WB detection (moderate cases) ---
                 wb_brightness = smoothed[wb_inner_start:wb_inner_end]
-                wb_win = min(15, len(wb_brightness) // 2 * 2 + 1)
+                wb_win_size = max(5, int(col_h * 0.06))  # ~6% of bar height
+                wb_win = min(wb_win_size, len(wb_brightness) // 2 * 2 + 1)
                 wb_local_avg = uniform_filter1d(wb_brightness, size=wb_win)
                 wb_dips = wb_brightness - wb_local_avg
 
                 # Much lower threshold for white box interior
+                wb_min_dark = max(2, int(col_h * 0.008))
                 wb_dark = np.where(wb_dips < -2.0)[0]
-                if len(wb_dark) >= 2:
+                if len(wb_dark) >= wb_min_dark:
                     # Cluster the dark rows
                     wd_diffs = np.diff(wb_dark)
-                    wd_splits = np.where(wd_diffs > 5)[0]
+                    wd_splits = np.where(wd_diffs > fish_gap)[0]
                     wd_clusters = np.split(wb_dark, wd_splits + 1)
                     best_wb_cluster = None
                     best_wb_dip = 0
                     for c in wd_clusters:
-                        if len(c) >= 2:
+                        if len(c) >= wb_min_dark:
                             cluster_dip = -np.min(wb_dips[c])
                             if cluster_dip > best_wb_dip:
                                 best_wb_dip = cluster_dip
@@ -403,7 +420,8 @@ class BarDetector:
             )
             # Progress fills from bottom up
             row_fill = np.sum(red_mask > 0, axis=1)
-            filled_rows = np.sum(row_fill > 1)
+            prog_w = px2 - px1
+            filled_rows = np.sum(row_fill > max(1, prog_w * 0.1))  # >10% of prog bar width
             self.progress = filled_rows / max(col_h, 1)
 
         return {
@@ -533,12 +551,17 @@ class ScreenCapture:
         img = np.array(screenshot)[:, :, :3]  # BGRA → BGR
         return img, region
 
-    def capture_bar_region(self, detector, padding=15):
+    def capture_bar_region(self, detector, padding=None):
         """Capture just the bar area for fast updates."""
+        bar_h = detector.col_y2 - detector.col_y1
+        bar_w = detector.col_x2 - detector.col_x1
+        if padding is None:
+            padding = max(4, int(bar_h * 0.05))  # ~5% of bar height
+        prog_extra = max(4, int(bar_w * 0.8))  # extra width for progress bar
         region = {
             'left': int(detector.col_x1 - padding),
             'top': int(detector.col_y1 - padding),
-            'width': int((detector.prog_x2 - detector.col_x1) + padding * 2 + 30),
+            'width': int((detector.prog_x2 - detector.col_x1) + padding * 2 + prog_extra),
             'height': int((detector.col_y2 - detector.col_y1) + padding * 2),
         }
         if region['width'] <= 0 or region['height'] <= 0:
@@ -679,8 +702,20 @@ def run_automation(debug=False, reel_only=False):
     game_win = find_game_window('fivem')
     if game_win:
         print(f"[*] Found game window: {game_win['title'][:60].encode('ascii', 'replace').decode()}")
+        # Focus the game window
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = game_win['hwnd']
+            user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+            user32.SetForegroundWindow(hwnd)
+            print("[*] Game window focused. Starting in 1s...")
+            time.sleep(1.0)
+        except Exception:
+            print("[!] Could not focus window. Starting in 3s...")
+            time.sleep(3.0)
     else:
-        print("[!] FiveM window not found, using primary monitor")
+        print("[!] FiveM window not found, using primary monitor. Starting in 3s...")
+        time.sleep(3.0)
 
     capture = ScreenCapture(game_window=game_win)
     detector = BarDetector()
@@ -716,6 +751,10 @@ def run_automation(debug=False, reel_only=False):
     control_interval = 1.0 / CONTROL_HZ
     last_status_log = 0.0
     minigame_frames = 0
+    last_bar_redetect = 0.0
+    low_blue_count = 0  # consecutive frames with low blue ratio
+    LOW_BLUE_THRESHOLD = 30  # require this many consecutive low-blue frames
+    max_blue_seen = 0.0  # track highest blue ratio seen during MINIGAME
 
     # Convert search region offset for absolute coordinate mapping
     search_offset_x = 0
@@ -732,6 +771,11 @@ def run_automation(debug=False, reel_only=False):
                 detector.bar_found = False
                 controller.reset()
             else:
+                # Anti-AFK: small movement before casting
+                pydirectinput.press('a')
+                time.sleep(0.15)
+                pydirectinput.press('d')
+                time.sleep(0.15)
                 print(f"\n[{catches}] Casting...")
                 pydirectinput.press('2')
                 state = GameState.WAITING
@@ -741,12 +785,57 @@ def run_automation(debug=False, reel_only=False):
                 time.sleep(1.0)
 
         elif state == GameState.WAITING:
+            # Wait for bite before looking for the minigame bar
+            wait_elapsed = now - state_start
+            total_wait = BITE_WAIT if reel_only else BITE_WAIT + BAR_APPEAR_DELAY
+            if not reel_only and wait_elapsed < total_wait:
+                remaining = total_wait - wait_elapsed
+                bite_remaining = max(0, BITE_WAIT - wait_elapsed)
+                if debug:
+                    img, _ = capture.capture_search_region()
+                    vis = img.copy()
+                    if bite_remaining > 0:
+                        label = f"Waiting for bite... {bite_remaining:.0f}s"
+                    else:
+                        label = f"Bar appearing... {remaining:.0f}s"
+                    cv2.putText(vis, label,
+                                (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                    show = cv2.resize(vis, (600, 500))
+                    cv2.imshow('Fishing Bot', show)
+                    if not topmost_set:
+                        _setup_topmost_window('Fishing Bot')
+                        topmost_set = True
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        running = False
+                        break
+                time.sleep(min(1.0, remaining))
+                continue
+
             # Poll for the minigame bar to appear
             img, region = capture.capture_search_region()
             search_offset_x = region['left']
             search_offset_y = region['top']
 
             if detector.find_bar(img):
+                # Validate the detected bar has sufficient bright blue
+                val_strip = img[detector.col_y1:detector.col_y2 + 1,
+                                detector.col_x1:detector.col_x2 + 1]
+                if val_strip.size > 0:
+                    val_hsv = cv2.cvtColor(val_strip, cv2.COLOR_BGR2HSV)
+                    val_mask = cv2.inRange(
+                        val_hsv,
+                        np.array([BLUE_H_MIN, 40, 100]),
+                        np.array([BLUE_H_MAX, 255, 255])
+                    )
+                    val_ratio = np.sum(val_mask > 0) / max(val_mask.size, 1)
+                    bar_w = detector.col_x2 - detector.col_x1
+                    bar_h = detector.col_y2 - detector.col_y1
+                    if val_ratio < 0.70:
+                        print(f"[!] Bar rejected: blue ratio {val_ratio:.1%} too low "
+                              f"(w={bar_w} h={bar_h} ratio={bar_h/max(bar_w,1):.1f})")
+                        detector.bar_found = False
+                        continue
+
                 # Convert to absolute screen coordinates
                 detector.col_x1 += search_offset_x
                 detector.col_x2 += search_offset_x
@@ -755,9 +844,13 @@ def run_automation(debug=False, reel_only=False):
                 detector.prog_x1 += search_offset_x
                 detector.prog_x2 += search_offset_x
 
-                print(f"[*] Minigame detected! Bar at x=[{detector.col_x1},{detector.col_x2}] y=[{detector.col_y1},{detector.col_y2}]")
+                bar_w = detector.col_x2 - detector.col_x1
+                bar_h = detector.col_y2 - detector.col_y1
+                print(f"[*] Minigame detected! Bar at x=[{detector.col_x1},{detector.col_x2}] "
+                      f"y=[{detector.col_y1},{detector.col_y2}] (w={bar_w} h={bar_h})")
                 state = GameState.MINIGAME
                 state_start = now
+                max_blue_seen = 0.0
                 # Start with space released, let box fall to bottom
                 controller.reset()
                 if controller.space_held:
@@ -766,7 +859,7 @@ def run_automation(debug=False, reel_only=False):
                 if debug:
                     # Show search region
                     vis = img.copy()
-                    cv2.putText(vis, f"Waiting for bite... ({now - state_start:.0f}s)",
+                    cv2.putText(vis, f"Looking for bar... ({now - state_start:.0f}s)",
                                 (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
                     show = cv2.resize(vis, (600, 500))
                     cv2.imshow('Fishing Bot', show)
@@ -783,6 +876,11 @@ def run_automation(debug=False, reel_only=False):
 
         elif state == GameState.MINIGAME:
             loop_start = time.perf_counter()
+
+            # Only check for catch after grace period (progress bar may show
+            # leftover values from the previous catch animation)
+            minigame_elapsed = now - state_start
+            catch_allowed = minigame_elapsed >= MINIGAME_GRACE
 
             # Capture bar region
             try:
@@ -808,6 +906,70 @@ def run_automation(debug=False, reel_only=False):
             det.prog_x1 = detector.prog_x1 - region['left']
             det.prog_x2 = detector.prog_x2 - region['left']
             det.bar_found = True
+
+            # Check if blue bar is still present (bright blue pixel density check)
+            # The bar has bright blue pixels (V>=100); deep blue from water/sky
+            # has low V and shouldn't count.
+            sy1 = max(0, min(det.col_y1, img.shape[0]))
+            sy2 = max(0, min(det.col_y2 + 1, img.shape[0]))
+            sx1 = max(0, min(det.col_x1, img.shape[1]))
+            sx2 = max(0, min(det.col_x2 + 1, img.shape[1]))
+            col_strip = img[sy1:sy2, sx1:sx2]
+            if col_strip.size > 0:
+                col_hsv = cv2.cvtColor(col_strip, cv2.COLOR_BGR2HSV)
+                bright_blue_mask = cv2.inRange(
+                    col_hsv,
+                    np.array([BLUE_H_MIN, 40, 100]),
+                    np.array([BLUE_H_MAX, 255, 255])
+                )
+                blue_ratio = np.sum(bright_blue_mask > 0) / max(bright_blue_mask.size, 1)
+                max_blue_seen = max(max_blue_seen, blue_ratio)
+                if blue_ratio < 0.10:
+                    low_blue_count += 1
+                    if low_blue_count == 1:
+                        # Save first low-blue frame for diagnostics
+                        diag_dir = os.path.join(os.path.dirname(__file__), 'diag_blue_gone')
+                        os.makedirs(diag_dir, exist_ok=True)
+                        cv2.imwrite(os.path.join(diag_dir, 'first_low.png'), img)
+                        cv2.imwrite(os.path.join(diag_dir, 'first_low_strip.png'), col_strip)
+                        print(f"[!] First low-blue frame: ratio={blue_ratio:.1%} "
+                              f"strip={col_strip.shape} region={region}")
+                else:
+                    low_blue_count = 0
+
+                if low_blue_count >= LOW_BLUE_THRESHOLD and catch_allowed:
+                    if max_blue_seen < 0.70:
+                        # Blue was never properly visible — false bar detection
+                        print(f"[!] False bar: blue never exceeded {max_blue_seen:.1%} "
+                              f"(need 70%). Returning to WAITING.")
+                        detector.bar_found = False
+                        state = GameState.WAITING
+                        state_start = now
+                        if controller.space_held:
+                            pydirectinput.keyUp('space')
+                            controller.space_held = False
+                        low_blue_count = 0
+                        continue
+                    print(f"[*] Blue bar gone ({low_blue_count} frames, ratio={blue_ratio:.1%}). Fish caught!")
+                    # Save diagnostic images
+                    diag_dir = os.path.join(os.path.dirname(__file__), 'diag_blue_gone')
+                    os.makedirs(diag_dir, exist_ok=True)
+                    cv2.imwrite(os.path.join(diag_dir, 'capture.png'), img)
+                    cv2.imwrite(os.path.join(diag_dir, 'col_strip.png'), col_strip)
+                    print(f"[!] Diagnostic images saved to {diag_dir}/ "
+                          f"(capture={img.shape}, strip={col_strip.shape}, "
+                          f"region={region})")
+                    state = GameState.CAUGHT
+                    state_start = now
+                    if controller.space_held:
+                        pydirectinput.keyUp('space')
+                        controller.space_held = False
+                    catches += 1
+                    low_blue_count = 0
+                    continue
+            else:
+                low_blue_count += 1
+
             det.fish_y_history = detector.fish_y_history
             det.fish_y = detector.fish_y
             det.box_top = detector.box_top
@@ -817,18 +979,7 @@ def run_automation(debug=False, reel_only=False):
             result = det.detect_elements(img)
 
             if result is None:
-                # Detection failed - bar might have disappeared (caught!)
-                # Check if we were making good progress
-                if detector.progress > 0.85:
-                    print(f"[*] Fish caught! (progress was {detector.progress:.0%})")
-                    state = GameState.CAUGHT
-                    state_start = now
-                    if controller.space_held:
-                        pydirectinput.keyUp('space')
-                        controller.space_held = False
-                    catches += 1
-                    continue
-                # Otherwise might be a detection glitch, retry
+                # Detection failed — might be a brief glitch, retry
                 continue
 
             # Copy detection results back
@@ -839,17 +990,6 @@ def run_automation(debug=False, reel_only=False):
             detector.progress = det.progress
             detector.fish_velocity = det.fish_velocity
             detector.fish_y_history = det.fish_y_history
-
-            # Check if progress bar is full
-            if detector.progress > 0.92:
-                print(f"[*] Fish caught! (progress {detector.progress:.0%})")
-                state = GameState.CAUGHT
-                state_start = now
-                if controller.space_held:
-                    pydirectinput.keyUp('space')
-                    controller.space_held = False
-                catches += 1
-                continue
 
             minigame_frames += 1
             if now - last_status_log >= 2.0:
@@ -898,13 +1038,9 @@ def run_automation(debug=False, reel_only=False):
                 time.sleep(sleep_time)
 
         elif state == GameState.CAUGHT:
-            if reel_only:
-                print(f"[*] Total catches: {catches}. Reel-only mode, returning to search...")
-                state = GameState.IDLE
-            else:
-                print(f"[*] Total catches: {catches}. Waiting {CAST_DELAY}s before next cast...")
-                time.sleep(CAST_DELAY)
-                state = GameState.IDLE
+            print(f"[*] Total catches: {catches}. Casting again in {CAST_DELAY}s...")
+            time.sleep(CAST_DELAY)
+            state = GameState.IDLE
 
     # Cleanup
     if controller.space_held:
