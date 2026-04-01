@@ -15,6 +15,10 @@ WHITE_BOX_SAT_THRESHOLD = 55
 # Fishscale detection: brightness drop from local average
 FISH_BRIGHTNESS_DROP = 12  # pixels darker than row average to count
 
+# Experimental CV pipeline for fish detection under the semi-transparent white box.
+# Keep this disabled by default until the evaluator shows a clear aggregate win.
+ADVANCED_INSIDE_BOX_DETECTION = True
+
 # Progress bar: red/orange fill detection
 PROGRESS_H_MIN, PROGRESS_H_MAX = 0, 12
 PROGRESS_S_MIN = 100

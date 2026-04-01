@@ -20,6 +20,7 @@ from config import (
     SEARCH_MARGIN_X_FRAC, SEARCH_MARGIN_Y_FRAC,
 )
 from control import FishingController
+from physics_calibration import load_live_physics_profile
 
 
 class TestDetectionThresholds:
@@ -94,14 +95,10 @@ class TestPhysicsConstants:
     """Verify controller physics constants are self-consistent."""
 
     def test_hover_duty_matches_gravity_thrust_ratio(self):
-        """HOVER ≈ gravity/thrust ≈ 3.24/3.61 ≈ 0.897 → but normalized to 0.47.
-        Actually HOVER represents the fraction of time space needs to be held
-        to counteract gravity, which is gravity/(gravity+thrust)."""
-        # Measured values: gravity=3.24, thrust=3.61
-        # HOVER should be close to gravity / (gravity + thrust)
-        # but the actual value is stored in the controller
+        """HOVER should match the active physics profile's neutral duty ratio."""
         c = FishingController()
-        expected_hover = 3.24 / (3.24 + 3.61)  # ≈ 0.473
+        profile = load_live_physics_profile()
+        expected_hover = profile.gravity / profile.thrust
         assert abs(c.HOVER - expected_hover) < 0.05, \
             f"HOVER={c.HOVER} differs from physics prediction {expected_hover:.3f}"
 

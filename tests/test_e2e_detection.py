@@ -326,6 +326,85 @@ class TestE2EStreamDetection:
         max_jump = max(vel_diffs)
         assert max_jump < 2.0, f"Velocity jump {max_jump:.3f} ≥ 2.0"
 
+    def test_stream_detection_on_relative_bar_crops_preserves_state(self):
+        """Automation-style cropped bar captures should preserve detector state across frames."""
+        frame_dir_path = os.path.join(os.path.dirname(CALIBRATION_FILE),
+                                      '2026-03-29 23-47-40')
+        det = BarDetector(use_advanced_inside_box=True)
+        frame_time = 0.0
+        dt = 1.0 / FPS
+        methods = []
+
+        for i in range(1188, 1203):
+            fpath = os.path.join(frame_dir_path, f"{i:06d}.png")
+            if not os.path.exists(fpath):
+                continue
+            img = cv2.imread(fpath)
+            if img is None:
+                continue
+            frame_time += dt
+
+            if not det.bar_found:
+                h, w = img.shape[:2]
+                cx, cy = w // 2, h // 2
+                mx = int(w * SEARCH_MARGIN_X_FRAC)
+                my = int(h * SEARCH_MARGIN_Y_FRAC)
+                roi = img[cy - my:cy + my, cx - mx:cx + mx]
+                if det.find_bar(roi):
+                    det.col_x1 += cx - mx
+                    det.col_x2 += cx - mx
+                    det.col_y1 += cy - my
+                    det.col_y2 += cy - my
+                    det.prog_x1 += cx - mx
+                    det.prog_x2 += cx - mx
+
+            if not det.bar_found:
+                continue
+
+            bar_h = det.col_y2 - det.col_y1
+            bar_w = det.col_x2 - det.col_x1
+            padding = max(4, int(bar_h * 0.05))
+            prog_extra = max(4, int(bar_w * 0.8))
+            region = {
+                'left': int(det.col_x1 - padding),
+                'top': int(det.col_y1 - padding),
+                'width': int((det.prog_x2 - det.col_x1) + padding * 2 + prog_extra),
+                'height': int((det.col_y2 - det.col_y1) + padding * 2),
+            }
+            crop = img[
+                region['top']:region['top'] + region['height'],
+                region['left']:region['left'] + region['width'],
+            ]
+            if crop.size == 0:
+                continue
+
+            abs_coords = (
+                det.col_x1,
+                det.col_x2,
+                det.col_y1,
+                det.col_y2,
+                det.prog_x1,
+                det.prog_x2,
+            )
+            det.col_x1 -= region['left']
+            det.col_x2 -= region['left']
+            det.col_y1 -= region['top']
+            det.col_y2 -= region['top']
+            det.prog_x1 -= region['left']
+            det.prog_x2 -= region['left']
+
+            result = det.detect_elements(crop, now=frame_time)
+            det.col_x1, det.col_x2, det.col_y1, det.col_y2, det.prog_x1, det.prog_x2 = abs_coords
+            if result is None:
+                continue
+            methods.append(result['fish_detect_method'])
+
+        assert methods, "No cropped frames were processed"
+        assert det.prev_col_gray is not None, "Detector should retain previous column state across cropped frames"
+        assert det.fish_template_grad is not None, "Detector should keep a fish template across cropped frames"
+        assert 'inside-template' in methods or 'outside-dip' in methods, \
+            f"Expected tracked/template detections in cropped stream, got {methods}"
+
 
 @requires_frames_1
 class TestE2EBarFinding:

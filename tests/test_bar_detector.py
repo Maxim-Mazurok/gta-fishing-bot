@@ -7,7 +7,7 @@ import time
 from tests.helpers import (
     BarDetector, SEARCH_MARGIN_X_FRAC, SEARCH_MARGIN_Y_FRAC,
     FRAME_DIR_1, FRAME_DIR_2,
-    HAS_FRAMES_1, HAS_FRAMES_2,
+    HAS_CALIBRATION, HAS_FRAMES_1, HAS_FRAMES_2,
     load_frame, detect_on_frame, create_synthetic_bar_image,
 )
 
@@ -17,6 +17,22 @@ requires_frames_1 = pytest.mark.skipif(
 requires_frames_2 = pytest.mark.skipif(
     not HAS_FRAMES_2, reason="Recording 2 frames not available"
 )
+requires_calibration = pytest.mark.skipif(
+    not HAS_CALIBRATION, reason="Calibration data not available"
+)
+
+
+def run_stream_detection(frame_name, history, advanced):
+    """Warm a detector on preceding frames so template + tracker state are realistic."""
+    detector = BarDetector(use_advanced_inside_box=advanced)
+    result = None
+    start = max(1, int(frame_name) - history)
+    for index in range(start, int(frame_name) + 1):
+        img = load_frame(FRAME_DIR_1, f'{index:06d}')
+        if img is None:
+            continue
+        detector, result = detect_on_frame(img, detector=detector)
+    return detector, result
 
 
 class TestBarDetectorInit:
@@ -302,9 +318,129 @@ class TestRegressionGuards:
         assert not (near_top or near_bot), \
             f"Fish at box edge: fish={fish_y:.3f} box=[{result['box_top']:.3f},{result['box_bottom']:.3f}]"
 
+    @requires_frames_1
+    @requires_calibration
+    @pytest.mark.parametrize("frame_name,expected_y", [
+        ('001145', 0.5703030303030303),
+        ('001147', 0.5684848484848485),
+        ('001197', 0.6516666666666667),
+        ('001199', 0.6509090909090909),
+        ('001201', 0.6616666666666667),
+        ('001203', 0.6650000000000001),
+    ])
+    def test_inside_box_stream_detection_stays_accurate(self, frame_name, expected_y):
+        """Stream-mode detection should stay close to calibrated fish positions under the white box."""
+        adv_det, advanced = run_stream_detection(frame_name, history=12, advanced=True)
+
+        assert adv_det is not None and advanced is not None
+
+        advanced_error = abs(advanced['fish_y'] - expected_y)
+        assert advanced_error <= 0.05, \
+            f"Advanced detector still too far off on {frame_name}: error={advanced_error:.3f}"
+
+    @requires_frames_1
+    def test_inside_box_template_matching_activates_in_stream_mode(self):
+        """Representative overlap frames should exercise the template-matching path."""
+        methods = []
+        for frame_name in ['001197', '001199']:
+            _det, result = run_stream_detection(frame_name, history=12, advanced=True)
+            assert result is not None
+            methods.append(result['fish_detect_method'])
+
+        assert 'inside-template' in methods, \
+            f"Template matcher never activated in stream mode: {methods}"
+
 
 class TestVelocityTracking:
     """Test fish velocity estimation across sequential frames."""
+
+    def test_velocity_favors_recent_motion(self):
+        """Velocity should react to recent speed changes instead of averaging old motion."""
+        det = BarDetector()
+
+        samples = [
+            (0.00, 0.10),
+            (0.05, 0.11),
+            (0.10, 0.12),
+            (0.15, 0.20),
+            (0.20, 0.30),
+        ]
+        for now, fish_y in samples:
+            det._update_velocity_tracking(fish_y, now, col_h=200)
+
+        full_history_velocity = (samples[-1][1] - samples[0][1]) / (samples[-1][0] - samples[0][0])
+
+        assert det.fish_velocity > full_history_velocity + 0.4
+        assert 1.6 <= det.fish_velocity <= 2.0
+
+    def test_direction_change_requires_confirmation_frames(self):
+        """Direction flips should require several consecutive frames before becoming confirmed."""
+        det = BarDetector()
+
+        samples = [
+            (0.00, 0.10),
+            (0.05, 0.12),
+            (0.10, 0.15),
+            (0.15, 0.19),
+        ]
+        for now, fish_y in samples:
+            det._update_velocity_tracking(fish_y, now, col_h=200)
+
+        assert det.fish_direction == 1
+        assert det.fish_velocity > 0
+
+        reverse_samples = [
+            (0.20, 0.12),
+            (0.25, 0.08),
+        ]
+        for now, fish_y in reverse_samples:
+            det._update_velocity_tracking(fish_y, now, col_h=200)
+
+        assert det.pending_fish_direction == -1
+        assert det.pending_direction_frames == 2
+        assert det.fish_direction == 1
+        assert det.fish_velocity > 0
+
+        det._update_velocity_tracking(0.10, 0.30, col_h=200)
+        assert det.fish_direction == -1
+        assert det.fish_velocity < 0
+
+    def test_missing_detection_carries_virtual_motion(self):
+        """When detection is missing, the virtual fish should continue smoothly instead of snapping."""
+        det = BarDetector()
+
+        for now, fish_y in [(0.00, 0.40), (0.05, 0.415), (0.10, 0.43)]:
+            det._update_velocity_tracking(fish_y, now, col_h=200)
+
+        previous_y = det.fish_y
+        det._update_velocity_tracking(None, 0.15, col_h=200)
+
+        assert det.detected_fish_y is None
+        assert det.last_detection_method == 'velocity-predict'
+        assert det.fish_y > previous_y
+        assert det.inferred_fish_y == pytest.approx(det.fish_y)
+
+    def test_missing_detection_biases_into_box_when_progress_rises(self):
+        """Missing fish frames should stay inside the white box when progress is still climbing."""
+        det = BarDetector()
+        det.box_top = 0.45
+        det.box_bottom = 0.65
+        det.box_center = 0.55
+        det.fish_y = 0.62
+        det.inferred_fish_y = 0.62
+        det.last_fish_update_time = 0.0
+        det.raw_fish_velocity = 0.30
+        det.fish_velocity = 0.30
+        det.fish_direction = 1
+        det.fish_speed = 0.30
+        det.fish_speed_band = 0.30
+        det.progress_delta = 0.02
+
+        det._update_velocity_tracking(None, 0.10, col_h=200)
+
+        assert det.last_detection_method == 'box-assume-progress'
+        assert det.detected_fish_y is None
+        assert det.box_top <= det.fish_y <= det.box_bottom
 
     @requires_frames_1
     def test_velocity_builds_over_frames(self):

@@ -40,6 +40,7 @@ from detection import BarDetector, detect_on_frame  # noqa: F401
 from capture import ScreenCapture, find_game_window  # noqa: F401
 from control import FishingController, GameState  # noqa: F401
 from automation import run_automation, run_test  # noqa: F401
+from simulation import FishingSimulator, evaluate_controller, run_controller_episode  # noqa: F401
 
 import argparse
 

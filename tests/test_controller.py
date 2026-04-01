@@ -34,6 +34,10 @@ class TestControllerReset:
         controller._accumulator = 0.7
         controller._last_box = 0.5
         controller._last_box_time = 100.0
+        controller.last_fish_pred = 0.8
+        controller.last_box_velocity = 1.2
+        controller.last_error = -0.3
+        controller.last_error_rate = 0.4
 
         controller.reset()
         assert controller.space_held is False
@@ -41,6 +45,10 @@ class TestControllerReset:
         assert controller._accumulator == 0.0
         assert controller._last_box is None
         assert controller._last_box_time == 0.0
+        assert controller.last_fish_pred == 0.5
+        assert controller.last_box_velocity == 0.0
+        assert controller.last_error == 0.0
+        assert controller.last_error_rate == 0.0
 
 
 class TestControllerUpdate:
@@ -162,6 +170,99 @@ class TestControllerLookahead:
 
         controller.update(det)
         # Should not crash even with extreme prediction
+
+    def test_debug_state_tracks_latest_control_values(self, controller):
+        """Controller should expose the latest predicted position and error terms for debugging."""
+        det = BarDetector()
+        det.fish_y = 0.3
+        det.box_center = 0.6
+        det.fish_velocity = 0.5
+        det.box_top = 0.4
+        det.box_bottom = 0.8
+
+        controller.update(det)
+
+        assert 0.34 <= controller.last_fish_pred <= 0.36
+        assert controller.last_error == pytest.approx(controller.last_fish_pred - det.box_center)
+        assert isinstance(controller.last_box_velocity, float)
+        assert isinstance(controller.last_error_rate, float)
+
+    def test_box_projection_returns_requested_frames(self, controller):
+        """White-box projections should be produced for each requested future frame."""
+        det = BarDetector()
+        det.box_center = 0.4
+
+        controller._duty = 0.75
+        controller._accumulator = 0.2
+        controller.last_box_velocity = -0.1
+
+        projections = controller.predict_box_positions(det, [1, 3, 5], control_hz=60)
+
+        assert [frame for frame, _ in projections] == [1, 3, 5]
+        assert all(0.0 <= value <= 1.0 for _, value in projections)
+
+    def test_intercept_plan_tracks_future_meeting(self, controller):
+        """The controller should expose a future meeting plan for calibration logging."""
+        det = BarDetector()
+        det.fish_y = 0.32
+        det.box_center = 0.62
+        det.box_top = 0.52
+        det.box_bottom = 0.72
+        det.fish_velocity = 0.35
+
+        controller.update(det)
+        plan = controller.predict_intercept_plan(det, control_hz=60, source_frame=10)
+
+        assert plan is controller.last_intercept_plan
+        assert plan['target_frame'] > 10
+        assert 1 <= plan['frames_ahead'] <= controller.PROJECTION_HORIZON_FRAMES
+        assert len(plan['fish_path']) == controller.PROJECTION_HORIZON_FRAMES
+        assert len(plan['box_path']) == controller.PROJECTION_HORIZON_FRAMES
+        assert 0.0 <= plan['predicted_fish_y'] <= 1.0
+        assert 0.0 <= plan['predicted_box_y'] <= 1.0
+
+    def test_prediction_uses_raw_velocity_during_direction_debounce(self, controller):
+        """Predictions should react to the latest measured reversal before direction debounce settles."""
+        det = BarDetector()
+        det.fish_y = 0.5
+        det.box_center = 0.5
+        det.box_top = 0.4
+        det.box_bottom = 0.6
+        det.fish_velocity = -0.3
+        det.raw_fish_velocity = 0.4
+
+        controller.update(det)
+
+        assert controller.last_fish_pred == pytest.approx(0.5 + 0.4 * controller.LOOKAHEAD)
+
+        plan = controller.predict_intercept_plan(det, control_hz=60, source_frame=20)
+        assert plan['fish_velocity'] == pytest.approx(0.4)
+        assert plan['confirmed_fish_velocity'] == pytest.approx(-0.3)
+
+    def test_progress_positive_overlap_reduces_position_chasing(self, controller):
+        """When overlap is already rewarding, control should stay closer to hover and match motion instead of recentering hard."""
+        det = BarDetector()
+        det.fish_y = 0.58
+        det.detected_fish_y = 0.58
+        det.inferred_fish_y = 0.58
+        det.box_top = 0.50
+        det.box_bottom = 0.62
+        det.box_center = 0.54
+        det.fish_velocity = 0.20
+        det.raw_fish_velocity = 0.20
+        det.virtual_fish_velocity = 0.20
+        det.progress_delta = 0.02
+
+        controller.update(det)
+        duty_tracking = controller._duty
+        assert controller.last_tracking_mode == 'tracking'
+
+        controller.reset()
+        det.progress_delta = 0.0
+        controller.update(det)
+        duty_normal = controller._duty
+
+        assert abs(duty_tracking - controller.HOVER) < abs(duty_normal - controller.HOVER)
 
 
 class TestGameState:

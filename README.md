@@ -28,7 +28,7 @@ The fishing minigame in GTA RP (FiveM) works as follows:
 1. Press **"2"** to cast the fishing line.
 2. Wait ~2 minutes for a fish to bite.
 3. A **blue column** appears on screen with:
-   - A **fishscale icon** (dark, moving up/down at constant speed, randomly reversing direction).
+  - A **fishscale icon** (dark, moving up/down with sudden speed and direction changes).
    - A **white box** (player-controlled) overlaying the column.
    - An **orange/red progress bar** next to the column.
 4. Hold **space** → box accelerates upward; release → box falls with gravity.
@@ -183,6 +183,12 @@ pytest tests/test_e2e_detection.py -v
 # Run only unit tests
 pytest tests/test_bar_detector.py tests/test_controller.py -v
 
+# Run simulator-based controller evaluation
+python evaluate_simulation.py --difficulty medium --episodes 25
+
+# Run live white-box physics calibration against the active minigame
+python calibrate_live_box_physics.py
+
 # Run existing regression tests
 python test_detection_regression.py
 python test_stream.py --verbose
@@ -228,7 +234,7 @@ python calibrate.py "2026-03-29 23-47-40"
 |---|---|---|
 | `Kp` | 1.5 | Proportional gain |
 | `Kd` | 1.0 | Derivative gain (on error rate) |
-| `HOVER` | 0.47 | Neutral duty cycle (gravity/thrust ratio) |
+| `HOVER` | Auto-loaded | Neutral duty cycle derived from valid live calibration runs |
 | `LOOKAHEAD` | 0.10s | Fish position prediction time |
 
 ---
@@ -268,8 +274,8 @@ python calibrate.py "2026-03-29 23-47-40"
 
 *Fallback — Velocity Prediction:*
 - If neither pass finds the fish, predict position from velocity history.
-- Fish moves at constant speed between direction changes, so prediction
-  stays valid for several hundred milliseconds.
+- Velocity is estimated from a short recent window so the tracker can adapt
+  when the fish switches between slower and faster movement phases.
 
 **Progress Bar Detection:**
 - Extract the strip to the right of the blue column.
@@ -324,21 +330,24 @@ than fixed-period PWM cycles.
 
 ## Physics Model
 
-Physics were measured experimentally using `measure_box_physics.py` and fit
-using `_fit_physics.py`. Seven controlled experiments were run:
+Physics are measured experimentally using `measure_box_physics.py` and the
+live fitter in `calibrate_live_box_physics.py`. The main app now scans
+`live_physics_calibration/*/summary.json`, filters outlier sessions, and uses
+the median of valid runs for the controller and simulator. Legacy defaults are
+only used when no valid live calibration sessions are available.
+
+Controlled experiments include:
 
 | Parameter | Value | Method |
 |---|---|---|
-| **Gravity** (downward accel when released) | 3.24 bar/s² | Constant acceleration fit |
-| **Thrust** (upward accel when held) | 3.61 bar/s² | Constant acceleration fit |
-| **Bottom-to-top time** | ~0.85s | Full traversal measurement |
-| **Top-to-bottom time** | ~0.72s | Full traversal measurement |
-| **Hover duty** | ~47% | gravity / (gravity + thrust) |
-| **Fish speed** | ~0.17 bar/s | Constant, independent of player |
+| **Gravity** (downward accel when released) | Auto-loaded | Median of valid live fits |
+| **Thrust** (effective upward force while held) | Auto-loaded | Median of valid live fits |
+| **Hover duty** | Auto-loaded | gravity / thrust from the active profile |
+| **Fish speed** | Variable | Estimated online from the most recent detections |
 | **Input lag** | ~100ms | Pulse response measurement |
 
-These values inform the controller's `HOVER`, `Kp`, `Kd`, and `LOOKAHEAD`
-parameters.
+These values inform the controller's `HOVER`, physics projection, and the
+simulator that runs controller regression tests.
 
 ---
 
@@ -356,6 +365,26 @@ The `calibrate.py` tool allows interactive calibration:
 The calibration file contains 113 frames with ground-truth fishscale positions,
 box boundaries, and whether the fish is inside the white box.
 
+### Live Projection Calibration
+
+When the main bot runs with `--debug`, it now records projection calibration
+artifacts in `live_debug_runs/<session>/`:
+
+- `telemetry.jsonl`: per-frame live detector/controller telemetry
+- `projection_calibration.jsonl`: predicted fish/box meeting plans resolved
+  against future observed frames
+- `projection_summary.json`: aggregate timing, fish prediction, and box
+  prediction errors, progress-growth reward statistics, and suggested
+  adjustments for lookahead, gravity, and thrust
+
+This gives a direct way to see whether the controller predicted the fish and
+white box would meet where they actually met, and what parts of the model are
+systematically early, late, weak, or aggressive.
+
+Progress growth is treated as the most reliable live reward signal: if the
+progress bar is increasing, the bot is doing something useful even when the
+detected fish point is not perfectly centered in the detected white box.
+
 ### Test Suite
 
 The project includes a comprehensive test suite:
@@ -366,6 +395,8 @@ The project includes a comprehensive test suite:
 | `tests/test_controller.py` | Unit | FishingController PWM, physics, gains, reset, state |
 | `tests/test_config.py` | Unit | Configuration constants, physics consistency |
 | `tests/test_e2e_detection.py` | E2E | Detection accuracy vs ground truth, achievements |
+| `tests/test_simulation.py` | Simulation | Seeded controller regression against randomized fish motion using the active calibrated physics and progress-growth reward |
+| `tests/test_live_box_calibration.py` | Calibration | Live box-physics fitting helpers and synthetic recovery |
 | `tests/test_benchmarks.py` | Perf | Detection & controller latency benchmarks |
 | `test_detection_regression.py` | Regression | Known-good/bad frame guard tests |
 | `test_stream.py` | Integration | Stream processing with velocity tracking |
@@ -408,6 +439,9 @@ The project includes a comprehensive test suite:
 │
 ├── measure_physics.py             # Fish position dynamics measurement
 ├── measure_box_physics.py         # Box physics measurement (7 experiments)
+├── simulation.py                  # Docs-derived fishing minigame simulator
+├── evaluate_simulation.py         # CLI evaluation runner for seeded simulation episodes
+├── calibrate_live_box_physics.py  # Live input-driven box-physics calibration UI
 ├── physics_data.csv               # Fish position time-series data
 ├── box_physics_data.csv           # Box physics time-series data
 ├── _fit_physics.py                # Physics model fitting (gravity, thrust)
