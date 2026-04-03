@@ -5,7 +5,7 @@ Assuming 100s wait for bite + 15s reel-in = 115s per fish (31.3 fish/hour).
 | Location     | Fish Caught | $/Fish (sales) | Available Bundles | $/Fish (bundles) | $/Fish (total) |  $/Hour |
 |--------------|------------:|---------------:|-------------------|-----------------:|---------------:|--------:|
 | Alamo Sea    |         147 |         $1,491 | Alamo Starter     |             $272 |     **$1,763** | $55,187 |
-| Land Act Dam |         139 |         $1,661 | none              |               $0 |     **$1,661** | $52,001 |
+| Land Act Dam |         147 |         $1,652 | none              |               $0 |     **$1,652** | $51,727 |
 
 ## Bundle Details
 
@@ -23,9 +23,9 @@ Tier drop rates are consistent across locations, suggesting a fixed game mechani
 
 | Tier | Alamo Sea | Land Act Dam | Average |
 |------|----------:|-------------:|--------:|
-| ★★★  |      8.2% |        10.1% |    9.1% |
-| ★★   |     29.3% |        27.3% |   28.3% |
-| ★    |     62.6% |        62.6% |   62.6% |
+| ★★★  |      8.2% |         9.5% |    8.8% |
+| ★★   |     29.3% |        25.9% |   27.6% |
+| ★    |     62.6% |        64.6% |   63.6% |
 
 ### Within-Tier Weights
 
@@ -90,17 +90,17 @@ Fitted smallest integer weights per fish using χ² goodness-of-fit (p > 0.05 = 
 
 χ² = 0.53, df = 5, p = 0.991 — excellent fit
 
-#### Land Act Dam — ★ (8 fish, 87 observed)
+#### Land Act Dam — ★ (8 fish, 95 observed)
 
 | Fish             | Count | Observed % | Weight | Expected % | Residual |
 |------------------|------:|-----------:|-------:|-----------:|---------:|
-| Murray Cod       |    19 |      21.8% |      5 |      20.0% |     +1.6 |
-| Sand Whiting     |    17 |      19.5% |      5 |      20.0% |     -0.4 |
-| Banded Butterfly |    16 |      18.4% |      5 |      20.0% |     -1.4 |
-| Triggerfish      |     8 |       9.2% |      2 |       8.0% |     +1.0 |
-| Black Bream      |     7 |       8.0% |      2 |       8.0% |     +0.0 |
-| Escolar          |     7 |       8.0% |      2 |       8.0% |     +0.0 |
-| Brook Trout      |     7 |       8.0% |      2 |       8.0% |     +0.0 |
-| Cod              |     6 |       6.9% |      2 |       8.0% |     -1.0 |
+| Murray Cod       |    22 |      23.2% |      8 |      20.5% |     +2.5 |
+| Sand Whiting     |    18 |      18.9% |      8 |      20.5% |     -1.5 |
+| Banded Butterfly |    18 |      18.9% |      8 |      20.5% |     -1.5 |
+| Triggerfish      |     9 |       9.5% |      3 |       7.7% |     +1.7 |
+| Escolar          |     8 |       8.4% |      3 |       7.7% |     +0.7 |
+| Black Bream      |     7 |       7.4% |      3 |       7.7% |     -0.3 |
+| Brook Trout      |     7 |       7.4% |      3 |       7.7% |     -0.3 |
+| Cod              |     6 |       6.3% |      3 |       7.7% |     -1.3 |
 
-χ² = 0.56, df = 7, p = 0.999 — excellent fit
+χ² = 1.27, df = 7, p = 0.989 — excellent fit
