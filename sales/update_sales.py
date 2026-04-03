@@ -143,6 +143,12 @@ TIER_PRICES = {
     "Humane Labs":  {1: 2150, 2: 2500, 3: 2850},
 }
 
+# Time per fish (seconds)
+SECONDS_WAITING_FOR_BITE = 100  # decreases with level ups
+SECONDS_REELING_IN = 15         # improves with skill
+SECONDS_PER_FISH = SECONDS_WAITING_FOR_BITE + SECONDS_REELING_IN
+FISH_PER_HOUR = 3600 / SECONDS_PER_FISH
+
 # Reverse lookup: fish name -> list of bundle names
 FISH_BUNDLES: dict[str, list[str]] = {}
 for bname, binfo in BUNDLES.items():
@@ -334,6 +340,7 @@ def build_comparison_table() -> str:
         total_value_per_fish = sale_value_per_fish + bundle_value_per_fish
 
         bundles_string = ", ".join(available_bundles) if available_bundles else "none"
+        revenue_per_hour = total_value_per_fish * FISH_PER_HOUR
 
         rows.append((
             region_name,
@@ -342,6 +349,7 @@ def build_comparison_table() -> str:
             bundles_string,
             f"${bundle_value_per_fish:,.0f}",
             f"**${total_value_per_fish:,.0f}**",
+            f"${revenue_per_hour:,.0f}",
         ))
 
     if not rows:
@@ -350,7 +358,9 @@ def build_comparison_table() -> str:
     headers = (
         "Location", "Fish Caught", "$/Fish (sales)",
         "Available Bundles", "$/Fish (bundles)", "$/Fish (total)",
+        "$/Hour",
     )
+    right_aligned_columns = {1, 2, 4, 5, 6}
     widths = [
         max(len(headers[column]), max(len(row[column]) for row in rows))
         for column in range(len(headers))
@@ -358,14 +368,15 @@ def build_comparison_table() -> str:
 
     def format_row(*values: str) -> str:
         return "| " + " | ".join(
-            f"{value:>{widths[column]}}" if column in (1, 2, 4, 5) else f"{value:<{widths[column]}}"
+            f"{value:>{widths[column]}}" if column in right_aligned_columns
+            else f"{value:<{widths[column]}}"
             for column, value in enumerate(values)
         ) + " |"
 
     lines = [format_row(*headers)]
     separator_parts = []
     for column in range(len(headers)):
-        if column in (1, 2, 4, 5):
+        if column in right_aligned_columns:
             separator_parts.append(f"{'-' * (widths[column] + 1)}:")
         else:
             separator_parts.append(f"{'-' * (widths[column] + 2)}")
@@ -416,12 +427,15 @@ def build_bundle_details(region_counts: dict[str, Counter]) -> str:
                 )
             else:
                 expected_fish = expected_fish_to_complete_bundle(fish_probabilities)
+                expected_time_seconds = expected_fish * SECONDS_PER_FISH
+                expected_time_minutes = expected_time_seconds / 60
                 bonus_per_fish = bundle_info["bonus"] / expected_fish
                 bundle_rows.append((
                     bundle_name,
                     ", ".join(bundle_info["fish"]),
                     f"${bundle_info['bonus']:,}",
                     f"{expected_fish:.0f}",
+                    f"{expected_time_minutes:.0f} min",
                     f"${bonus_per_fish:,.0f}",
                     " \\| ".join(fish_details),
                 ))
@@ -431,16 +445,18 @@ def build_bundle_details(region_counts: dict[str, Counter]) -> str:
 
         headers = (
             "Bundle", "Fish", "Bonus",
-            "Avg Fish to Complete", "Bonus/Fish", "Catch Rates",
+            "Avg Fish to Complete", "Avg Time", "Bonus/Fish", "Catch Rates",
         )
         widths = [
             max(len(headers[column]), max(len(row[column]) for row in bundle_rows))
             for column in range(len(headers))
         ]
 
+        bundle_right_columns = {2, 3, 4, 5}
+
         def format_bundle_row(*values: str) -> str:
             return "| " + " | ".join(
-                f"{value:>{widths[column]}}" if column in (2, 3, 4)
+                f"{value:>{widths[column]}}" if column in bundle_right_columns
                 else f"{value:<{widths[column]}}"
                 for column, value in enumerate(values)
             ) + " |"
@@ -448,7 +464,7 @@ def build_bundle_details(region_counts: dict[str, Counter]) -> str:
         lines = [f"### {region_name}", "", format_bundle_row(*headers)]
         separator_parts = []
         for column in range(len(headers)):
-            if column in (2, 3, 4):
+            if column in bundle_right_columns:
                 separator_parts.append(f"{'-' * (widths[column] + 1)}:")
             else:
                 separator_parts.append(f"{'-' * (widths[column] + 2)}")
@@ -499,7 +515,13 @@ def main() -> None:
                     region_counts[region_name] = counts
 
         bundle_details = build_bundle_details(region_counts)
-        content = f"# Location Comparison\n\n{comparison_table}\n"
+        time_note = (
+            f"Assuming {SECONDS_WAITING_FOR_BITE}s wait for bite"
+            f" + {SECONDS_REELING_IN}s reel-in"
+            f" = {SECONDS_PER_FISH}s per fish"
+            f" ({FISH_PER_HOUR:.1f} fish/hour)."
+        )
+        content = f"# Location Comparison\n\n{time_note}\n\n{comparison_table}\n"
         if bundle_details:
             content += f"\n{bundle_details}\n"
 
