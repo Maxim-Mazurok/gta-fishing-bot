@@ -229,6 +229,89 @@ class BarDetector:
         y1 = bar_rows[0]
         y2 = bar_rows[-1]
 
+        # --- Shape and edge validation ---
+        # The real bar is a UI element with sharp, straight vertical edges
+        # and high contrast against the game background.  Sky/water gradients
+        # can produce blue column candidates but lack these properties.
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        bar_w = x2 - x1 + 1
+        bar_h = y2 - y1 + 1
+
+        # 1. Edge contrast: measure the sharpest intensity step across the
+        #    bar's left/right borders (averaged over full height).
+        border_pad = min(5, max(2, bar_w))
+        left_start = max(0, x1 - border_pad)
+        right_end = min(img_w, x2 + border_pad + 1)
+        border_strip = gray[y1:y2 + 1, left_start:right_end]
+        profile = np.mean(border_strip.astype(float), axis=0)
+        diffs = np.diff(profile)
+        edge_contrast = max(abs(np.min(diffs)), abs(np.max(diffs))) if len(diffs) > 0 else 0
+
+        # 2. Background contrast: difference between bar brightness and
+        #    surrounding background.
+        bar_brightness = np.mean(gray[y1:y2 + 1, x1:x2 + 1])
+        left_bg = gray[y1:y2 + 1, max(0, x1 - 10):max(0, x1 - 1)]
+        right_bg = gray[y1:y2 + 1, min(img_w, x2 + 2):min(img_w, x2 + 11)]
+        left_bright = np.mean(left_bg) if left_bg.size > 0 else bar_brightness
+        right_bright = np.mean(right_bg) if right_bg.size > 0 else bar_brightness
+        bg_contrast = abs(bar_brightness - (left_bright + right_bright) / 2)
+
+        # 3. Vertical edge lines via Hough transform.
+        bar_border = gray[y1:y2 + 1, max(0, x1 - 3):min(img_w, x2 + 4)]
+        canny = cv2.Canny(bar_border, 50, 150)
+        min_line_len = max(20, bar_h // 4)
+        lines = cv2.HoughLinesP(canny, 1, np.pi / 180, threshold=20,
+                                minLineLength=min_line_len, maxLineGap=5)
+        vert_lines = 0
+        if lines is not None:
+            for line in lines:
+                lx1, ly1, lx2, ly2 = line[0]
+                dx = lx2 - lx1
+                dy = ly2 - ly1
+                angle = abs(np.degrees(np.arctan2(dy, dx))) if dx != 0 else 90
+                if angle > 75:
+                    vert_lines += 1
+
+        # Reject candidates that lack real bar characteristics.
+        # Real bars: edge_contrast ~66-70, bg_contrast ~34-43, vert_lines >= 2
+        # False positives: edge_contrast <5, bg_contrast <5, vert_lines = 0
+        MIN_EDGE_CONTRAST = 25
+        MIN_BG_CONTRAST = 15
+        MIN_VERT_LINES = 1
+
+        if edge_contrast < MIN_EDGE_CONTRAST or bg_contrast < MIN_BG_CONTRAST or vert_lines < MIN_VERT_LINES:
+            self._last_find_bar_diag = (
+                f'img={img_w}x{img_h} bar={bar_w}x{bar_h} '
+                f'edge_contrast={edge_contrast:.1f}<{MIN_EDGE_CONTRAST} '
+                f'bg_contrast={bg_contrast:.1f}<{MIN_BG_CONTRAST} '
+                f'vert_lines={vert_lines}<{MIN_VERT_LINES} '
+                f'fail=shape-reject'
+            )
+            return False
+
+        # 4. Blue fill density: the bar interior must be predominantly blue.
+        #    Real bars: >90% blue pixels, >89% of rows have >50% blue.
+        bar_hsv = hsv[y1:y2 + 1, x1:x2 + 1]
+        bar_blue_mask = cv2.inRange(
+            bar_hsv,
+            np.array([BLUE_H_MIN, BLUE_S_MIN, 20]),
+            np.array([BLUE_H_MAX, 255, 255]),
+        )
+        bar_blue_ratio = np.sum(bar_blue_mask > 0) / max(bar_blue_mask.size, 1)
+        row_blue_frac = np.mean(bar_blue_mask > 0, axis=1)
+        blue_row_ratio = np.sum(row_blue_frac > 0.5) / max(bar_h, 1)
+
+        MIN_BAR_BLUE = 0.80
+        MIN_BLUE_ROW_RATIO = 0.75
+        if bar_blue_ratio < MIN_BAR_BLUE or blue_row_ratio < MIN_BLUE_ROW_RATIO:
+            self._last_find_bar_diag = (
+                f'img={img_w}x{img_h} bar={bar_w}x{bar_h} '
+                f'bar_blue={bar_blue_ratio:.3f}<{MIN_BAR_BLUE} '
+                f'blue_rows={blue_row_ratio:.3f}<{MIN_BLUE_ROW_RATIO} '
+                f'fail=blue-fill-reject'
+            )
+            return False
+
         self.col_x1 = x1
         self.col_x2 = x2
         self.col_y1 = y1
@@ -775,6 +858,12 @@ class BarDetector:
     def _track_fish(self, gray, col_h):
         """Track the fish vertically through ambiguous frames with Lucas-Kanade optical flow."""
         if self.prev_col_gray is None or self.tracker_points is None or not self.last_detection_confident:
+            return None
+
+        # Guard against frame size changes (e.g. capture region shift)
+        if self.prev_col_gray.shape != gray.shape:
+            self.prev_col_gray = None
+            self.tracker_points = None
             return None
 
         next_points, status, _err = cv2.calcOpticalFlowPyrLK(

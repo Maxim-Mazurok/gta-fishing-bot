@@ -36,11 +36,12 @@ Atlantic Salmon	4
 --sold
 Musky	2
 Sturgeon	1
-Escolar	2
+Escolar	3
 Brook Trout	1
-Murray Cod	1
-Triggerfish	1
+Murray Cod	4
+Triggerfish	2
 Rainbow Trout	1
 Cod	1
-Sand Whiting	1
+Sand Whiting	2
+Banded Butterfly	2
 --sold

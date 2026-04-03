@@ -521,6 +521,9 @@ def _set_detector_note(state_ctx, note):
 def _handle_idle(state_ctx):
     """Handle IDLE state: anti-AFK movement and casting."""
     now = state_ctx['now']
+    state_ctx['timing']['cast_start'] = now
+    state_ctx['timing']['minigame_start'] = None
+    state_ctx['timing']['catch_time'] = None
     if state_ctx['reel_only']:
         state_ctx['state'] = GameState.WAITING
         state_ctx['state_start'] = now
@@ -543,37 +546,12 @@ def _handle_idle(state_ctx):
 
 
 def _handle_waiting(state_ctx):
-    """Handle WAITING state: wait for bite and poll for minigame bar."""
+    """Handle WAITING state: poll for minigame bar."""
     now = state_ctx['now']
     detector = state_ctx['detector']
     capture = state_ctx['capture']
     debug = state_ctx['debug']
     reel_only = state_ctx['reel_only']
-
-    wait_elapsed = now - state_ctx['state_start']
-    total_wait = BITE_WAIT if reel_only else BITE_WAIT + BAR_APPEAR_DELAY
-    if not reel_only and wait_elapsed < total_wait:
-        remaining = total_wait - wait_elapsed
-        bite_remaining = max(0, BITE_WAIT - wait_elapsed)
-        if debug:
-            img, _ = capture.capture_search_region()
-            vis = img.copy()
-            if bite_remaining > 0:
-                label = f"Waiting for bite... {bite_remaining:.0f}s"
-            else:
-                label = f"Bar appearing... {remaining:.0f}s"
-            cv2.putText(vis, label,
-                        (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-            show = cv2.resize(vis, (600, 500))
-            cv2.imshow(DEBUG_WINDOW_NAME, show)
-            if not state_ctx['topmost_set']:
-                _setup_topmost_window(DEBUG_WINDOW_NAME)
-                state_ctx['topmost_set'] = True
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                state_ctx['running'] = False
-                return
-        time.sleep(min(1.0, remaining))
-        return
 
     # Poll for the minigame bar to appear
     img, region = capture.capture_search_region()
@@ -584,9 +562,9 @@ def _handle_waiting(state_ctx):
         # Require consecutive detections to confirm bar (prevents false positives at startup)
         confirm_count = state_ctx.get('_bar_confirm_count', 0) + 1
         state_ctx['_bar_confirm_count'] = confirm_count
-        if confirm_count < 3:
+        if confirm_count < 5:
             if confirm_count == 1:
-                print(f"[*] Bar candidate found, confirming... ({confirm_count}/3)")
+                print(f"[*] Bar candidate found, confirming... ({confirm_count}/5)")
             detector.bar_found = False
             time.sleep(0.05)
             return
@@ -604,7 +582,7 @@ def _handle_waiting(state_ctx):
             val_ratio = np.sum(val_mask > 0) / max(val_mask.size, 1)
             bar_w = detector.col_x2 - detector.col_x1
             bar_h = detector.col_y2 - detector.col_y1
-            if val_ratio < 0.40:
+            if val_ratio < 0.60:
                 print(f"[!] Bar rejected: blue ratio {val_ratio:.1%} too low "
                       f"(w={bar_w} h={bar_h} ratio={bar_h/max(bar_w,1):.1f})")
                 detector.bar_found = False
@@ -622,12 +600,25 @@ def _handle_waiting(state_ctx):
         bar_h = detector.col_y2 - detector.col_y1
         print(f"[*] Minigame detected! Bar at x=[{detector.col_x1},{detector.col_x2}] "
               f"y=[{detector.col_y1},{detector.col_y2}] (w={bar_w} h={bar_h})")
+        # Save detection frame for debugging false positives
+        recorder = state_ctx.get('debug_recorder')
+        if recorder is not None:
+            detect_dir = os.path.join(recorder['session_dir'], 'bar_detections')
+            detect_idx = state_ctx.get('_bar_detect_count', 0)
+            state_ctx['_bar_detect_count'] = detect_idx + 1
+            recorder['writer'].write_image(
+                os.path.join(detect_dir, f'{detect_idx:03d}_search.png'), img)
         _set_detector_note(state_ctx, 'minigame-detected')
         state_ctx['state'] = GameState.MINIGAME
         state_ctx['state_start'] = now
+        state_ctx['timing']['minigame_start'] = now
         state_ctx['max_blue_seen'] = 0.0
         state_ctx['minigame_frames'] = 0
         state_ctx['prev_debug_fish_y'] = None
+        state_ctx['fish_last_moved'] = None
+        state_ctx['fish_last_y'] = None
+        state_ctx['progress_last_seen'] = None
+        state_ctx['bar_signal_lost'] = None
         # Start with space released, let box fall to bottom
         controller = state_ctx['controller']
         controller.reset()
@@ -662,10 +653,7 @@ def _handle_waiting(state_ctx):
                     diag_path = _os.path.join(recorder['session_dir'], f'search_fail_{diag_count:03d}.png')
                     cv2.imwrite(diag_path, img)
                 state_ctx['_diag_save_count'] = diag_count + 1
-        if reel_only:
-            time.sleep(0.1)
-        else:
-            time.sleep(CAST_WAIT_POLL)
+        time.sleep(0.1)
 
 
 def _check_blue_bar_gone(state_ctx, col_strip, blue_ratio, catch_allowed):
@@ -674,7 +662,6 @@ def _check_blue_bar_gone(state_ctx, col_strip, blue_ratio, catch_allowed):
     controller = state_ctx['controller']
     now = state_ctx['now']
 
-    state_ctx['max_blue_seen'] = max(state_ctx['max_blue_seen'], blue_ratio)
     if blue_ratio < 0.10:
         state_ctx['low_blue_count'] += 1
         if state_ctx['low_blue_count'] == 1:
@@ -691,13 +678,13 @@ def _check_blue_bar_gone(state_ctx, col_strip, blue_ratio, catch_allowed):
     else:
         state_ctx['low_blue_count'] = 0
 
-    LOW_BLUE_THRESHOLD = 30
+    LOW_BLUE_THRESHOLD = 90
     if state_ctx['low_blue_count'] >= LOW_BLUE_THRESHOLD and catch_allowed:
         if state_ctx['max_blue_seen'] < 0.70:
             print(f"[!] False bar: blue never exceeded {state_ctx['max_blue_seen']:.1%} "
-                  f"(need 70%). Returning to WAITING.")
+                  f"(need 70%). Recasting.")
             detector.bar_found = False
-            state_ctx['state'] = GameState.WAITING
+            state_ctx['state'] = GameState.IDLE
             state_ctx['state_start'] = now
             if controller.space_held:
                 pydirectinput.keyUp('space')
@@ -718,6 +705,7 @@ def _check_blue_bar_gone(state_ctx, col_strip, blue_ratio, catch_allowed):
               f"region={state_ctx['region']})")
         state_ctx['state'] = GameState.CAUGHT
         state_ctx['state_start'] = now
+        state_ctx['timing']['catch_time'] = now
         if controller.space_held:
             pydirectinput.keyUp('space')
             controller.space_held = False
@@ -785,10 +773,31 @@ def _handle_minigame(state_ctx):
         col_hsv = cv2.cvtColor(col_strip, cv2.COLOR_BGR2HSV)
         bright_blue_mask = cv2.inRange(
             col_hsv,
-            np.array([BLUE_H_MIN, 25, 50]),
+            np.array([BLUE_H_MIN, 25, 20]),
             np.array([BLUE_H_MAX, 255, 255])
         )
         blue_ratio = np.sum(bright_blue_mask > 0) / max(bright_blue_mask.size, 1)
+
+        # Track maximum blue seen during this minigame
+        state_ctx['max_blue_seen'] = max(state_ctx['max_blue_seen'], blue_ratio)
+
+        # Early bail-out: if blue ratio has never been high in the first
+        # ~30 frames (~0.5s), this is almost certainly a false detection.
+        EARLY_BAIL_FRAMES = 30
+        EARLY_BAIL_MIN_BLUE = 0.40
+        if (state_ctx['minigame_frames'] >= EARLY_BAIL_FRAMES
+                and state_ctx['max_blue_seen'] < EARLY_BAIL_MIN_BLUE):
+            print(f"[!] Early bail: blue never exceeded {state_ctx['max_blue_seen']:.1%} "
+                  f"in {state_ctx['minigame_frames']} frames. False detection.")
+            detector.bar_found = False
+            state_ctx['state'] = GameState.IDLE
+            state_ctx['state_start'] = now
+            if controller.space_held:
+                pydirectinput.keyUp('space')
+                controller.space_held = False
+            detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+            return
+
         if _check_blue_bar_gone(state_ctx, col_strip, blue_ratio, catch_allowed):
             detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
             return
@@ -802,6 +811,95 @@ def _handle_minigame(state_ctx):
         return
 
     state_ctx['minigame_frames'] += 1
+
+    # Stuck detection: if fish_y hasn't moved for 3s, bail out as false positive
+    FISH_STUCK_TIMEOUT = 3.0
+    FISH_MOVE_THRESHOLD = 0.03
+    fish_y = detector.fish_y
+    if state_ctx['fish_last_moved'] is None:
+        state_ctx['fish_last_moved'] = now
+        state_ctx['fish_last_y'] = fish_y
+    elif abs(fish_y - state_ctx['fish_last_y']) > FISH_MOVE_THRESHOLD:
+        state_ctx['fish_last_moved'] = now
+        state_ctx['fish_last_y'] = fish_y
+    elif now - state_ctx['fish_last_moved'] >= FISH_STUCK_TIMEOUT:
+        print(f"[!] Fish stuck at {fish_y:.3f} for {FISH_STUCK_TIMEOUT}s. "
+              f"Assuming false positive, recasting.")
+        detector.bar_found = False
+        state_ctx['state'] = GameState.IDLE
+        state_ctx['state_start'] = now
+        state_ctx['fish_last_moved'] = None
+        state_ctx['fish_last_y'] = None
+        if controller.space_held:
+            pydirectinput.keyUp('space')
+            controller.space_held = False
+        detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+        return
+
+    # Progress stall timeout: if progress stays near 0 for 10s after grace,
+    # the minigame is over or was never real (noise can't sustain progress).
+    PROGRESS_STALL_TIMEOUT = 10.0
+    PROGRESS_STALL_MIN = 0.02
+    if catch_allowed:  # only after grace period
+        if detector.progress >= PROGRESS_STALL_MIN:
+            state_ctx['progress_last_seen'] = now
+        elif state_ctx['progress_last_seen'] is None:
+            # Never seen progress after grace — start counting from grace end
+            state_ctx['progress_last_seen'] = state_ctx['state_start'] + MINIGAME_GRACE
+        if now - state_ctx['progress_last_seen'] >= PROGRESS_STALL_TIMEOUT:
+            print(f"[!] Progress stalled at 0 for {PROGRESS_STALL_TIMEOUT}s. "
+                  f"Minigame likely ended, recasting.")
+            detector.bar_found = False
+            state_ctx['state'] = GameState.IDLE
+            state_ctx['state_start'] = now
+            state_ctx['fish_last_moved'] = None
+            state_ctx['fish_last_y'] = None
+            state_ctx['progress_last_seen'] = None
+            if controller.space_held:
+                pydirectinput.keyUp('space')
+                controller.space_held = False
+            detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+            return
+
+    # Bar presence check: verify the bar is actually visible by checking for
+    # strong blue AND a valid white box shape in the crop.  If both are absent
+    # for 2 seconds the minigame UI is gone (we're looking at water/hands).
+    BAR_SIGNAL_TIMEOUT = 2.0
+    box_span = detector.box_bottom - detector.box_top
+    has_valid_box = 0.03 < box_span < 0.50
+    # Strong blue: S>=80, V>=80 in the column strip (water is dark, real bar is bright)
+    strong_blue_ratio = 0.0
+    if col_strip.size > 0:
+        strip_hsv = cv2.cvtColor(col_strip, cv2.COLOR_BGR2HSV)
+        strong_mask = cv2.inRange(
+            strip_hsv,
+            np.array([BLUE_H_MIN, 80, 80]),
+            np.array([BLUE_H_MAX, 255, 255])
+        )
+        strong_blue_ratio = np.sum(strong_mask > 0) / max(strong_mask.size, 1)
+    has_strong_blue = strong_blue_ratio >= 0.01
+
+    if has_valid_box or has_strong_blue:
+        state_ctx['bar_signal_lost'] = None  # bar is present, reset
+    else:
+        if state_ctx['bar_signal_lost'] is None:
+            state_ctx['bar_signal_lost'] = now
+        elif now - state_ctx['bar_signal_lost'] >= BAR_SIGNAL_TIMEOUT:
+            print(f"[!] Bar gone: no valid box (span={box_span:.2f}) and no strong blue "
+                  f"({strong_blue_ratio:.1%}) for {BAR_SIGNAL_TIMEOUT}s. Recasting.")
+            detector.bar_found = False
+            state_ctx['state'] = GameState.IDLE
+            state_ctx['state_start'] = now
+            state_ctx['fish_last_moved'] = None
+            state_ctx['fish_last_y'] = None
+            state_ctx['progress_last_seen'] = None
+            state_ctx['bar_signal_lost'] = None
+            if controller.space_held:
+                pydirectinput.keyUp('space')
+                controller.space_held = False
+            detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+            return
+
     if now - state_ctx['last_status_log'] >= 2.0:
         state_ctx['last_status_log'] = now
         err = detector.fish_y - detector.box_center
@@ -847,8 +945,41 @@ def _handle_minigame(state_ctx):
 
 
 def _handle_caught(state_ctx):
-    """Handle CAUGHT state: log catch and prepare for next cast."""
-    print(f"[*] Total catches: {state_ctx['catches']}. Casting again in {CAST_DELAY}s...")
+    """Handle CAUGHT state: log catch, report timing, and prepare for next cast."""
+    timing = state_ctx['timing']
+    catch_time = timing.get('catch_time')
+    cast_start = timing.get('cast_start')
+    minigame_start = timing.get('minigame_start')
+
+    find_time = None
+    reel_time = None
+    total_time = None
+    if cast_start is not None and minigame_start is not None:
+        find_time = minigame_start - cast_start
+        timing['find_times'].append(find_time)
+    if minigame_start is not None and catch_time is not None:
+        reel_time = catch_time - minigame_start
+        timing['reel_times'].append(reel_time)
+    if cast_start is not None and catch_time is not None:
+        total_time = catch_time - cast_start
+        timing['total_times'].append(total_time)
+
+    parts = [f"[*] Catch #{state_ctx['catches']}"]
+    if find_time is not None:
+        parts.append(f"find={find_time:.1f}s")
+    if reel_time is not None:
+        parts.append(f"reel={reel_time:.1f}s")
+    if total_time is not None:
+        parts.append(f"total={total_time:.1f}s")
+    print(f"  {'  '.join(parts)}")
+
+    if timing['total_times']:
+        avg_find = sum(timing['find_times']) / len(timing['find_times']) if timing['find_times'] else 0
+        avg_reel = sum(timing['reel_times']) / len(timing['reel_times']) if timing['reel_times'] else 0
+        avg_total = sum(timing['total_times']) / len(timing['total_times'])
+        print(f"  [avg] find={avg_find:.1f}s  reel={avg_reel:.1f}s  total={avg_total:.1f}s  (n={len(timing['total_times'])})")
+
+    print(f"[*] Casting again in {CAST_DELAY}s...")
     _set_detector_note(state_ctx, 'fish-caught')
     time.sleep(CAST_DELAY)
     state_ctx['state'] = GameState.IDLE
@@ -897,6 +1028,14 @@ def run_automation(debug=False, reel_only=False):
         'state': GameState.IDLE,
         'state_start': time.perf_counter(),
         'catches': 0,
+        'timing': {
+            'cast_start': None,
+            'minigame_start': None,
+            'catch_time': None,
+            'find_times': [],
+            'reel_times': [],
+            'total_times': [],
+        },
         'running': True,
         'debug': debug,
         'reel_only': reel_only,
@@ -915,6 +1054,10 @@ def run_automation(debug=False, reel_only=False):
         'region': None,
         'debug_recorder': _create_live_debug_recorder(debug),
         'prev_debug_fish_y': None,
+        'fish_last_moved': None,
+        'fish_last_y': None,
+        'progress_last_seen': None,
+        'bar_signal_lost': None,
     }
 
     # Graceful shutdown
