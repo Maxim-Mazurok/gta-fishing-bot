@@ -34,14 +34,19 @@ Black Bream	3
 Banded Butterfly	9
 Atlantic Salmon	4
 --sold
-Musky	2
-Sturgeon	1
-Escolar	3
+Musky	3
+Sturgeon	3
+Escolar	4
 Brook Trout	1
-Murray Cod	4
-Triggerfish	2
-Rainbow Trout	1
-Cod	1
+Murray Cod	6
+Triggerfish	5
+Rainbow Trout	2
+Cod	3
 Sand Whiting	2
-Banded Butterfly	2
+Banded Butterfly	3
+Atlantic Salmon	3
+Pike	1
+Carp	1
+Wahoo	1
+Black Bream	1
 --sold

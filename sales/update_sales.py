@@ -167,7 +167,7 @@ for bname, binfo in BUNDLES.items():
 def parse_log(path: Path) -> Counter:
     """Parse a log file and return total fish counts across all batches."""
     totals: Counter = Counter()
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line == "--sold":
             continue
@@ -327,10 +327,10 @@ def update_md(region_key: str, region_name: str) -> None:
         print(f"  skipping {region_key}: no data")
         return
 
-    batches = log_path.read_text().count("--sold")
+    batches = log_path.read_text(encoding="utf-8").count("--sold")
     table = build_table(counts)
     content = f"# {region_name}\n\n{batches} batches sold\n\n{table}\n"
-    md_path.write_text(content)
+    md_path.write_text(content, encoding="utf-8")
     print(f"  {region_key}.md updated ({len(counts)} fish, {batches} batches)")
 
 
@@ -811,7 +811,7 @@ def main() -> None:
     # Write bundles.md
     bundles_md = SALES_DIR / "bundles.md"
     table = build_bundles_table()
-    bundles_md.write_text(f"# Bundles\n\n{table}\n")
+    bundles_md.write_text(f"# Bundles\n\n{table}\n", encoding="utf-8")
     print(f"  bundles.md updated ({len(BUNDLES)} bundles)")
 
     # Write prices.md
@@ -855,7 +855,7 @@ def main() -> None:
             content += f"\n{drop_rate_analysis}\n"
 
         comparison_md = SALES_DIR / "comparison.md"
-        comparison_md.write_text(content)
+        comparison_md.write_text(content, encoding="utf-8")
         print("  comparison.md updated")
 
 
