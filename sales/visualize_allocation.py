@@ -5,6 +5,9 @@ Generates figures showing:
 2. Revenue decomposition: sales vs bundles along the optimal path
 3. Bundle fill-rate bottleneck illustration
 4. Competing forces: sales value vs bundle completions
+5. min() envelope anatomy — rate lines and kink points per bundle
+6. Full piecewise-linear objective decomposition (zoomed stacked)
+7. Individual components (unstacked, own scales)
 """
 
 from collections import Counter
@@ -574,6 +577,448 @@ def figure_4_competing_forces(
     print(f"  Saved {output_path}")
 
 
+def _find_optimal_fractions(
+    locations: list[str],
+    sale_values: dict[str, float],
+    bundles: list,
+    granularity: int = 100,
+) -> dict[str, float]:
+    """Grid-search for the optimal allocation fractions."""
+    best_revenue = -1.0
+    best_fractions: dict[str, float] = {}
+    for step_a in range(granularity + 1):
+        fraction_a = step_a / granularity
+        remaining = granularity - step_a
+        for step_b in range(remaining + 1):
+            fraction_b = step_b / granularity
+            fraction_c = 1.0 - fraction_a - fraction_b
+            fractions = {
+                locations[0]: fraction_a,
+                locations[1]: fraction_b,
+                locations[2]: fraction_c,
+            }
+            revenue = _compute_revenue(fractions, sale_values, bundles)
+            if revenue > best_revenue:
+                best_revenue = revenue
+                best_fractions = fractions.copy()
+    return best_fractions
+
+
+def _build_1d_sweep_path(
+    sweep_location: str,
+    other_locations: list[str],
+    other_ratios: list[float],
+    steps: int = 500,
+) -> tuple[np.ndarray, list[dict[str, float]]]:
+    """Build a 1D path parameterized by one location's fraction.
+
+    Returns (sweep_values, list_of_fraction_dicts).
+    The other locations share the remaining (1-f) proportionally.
+    """
+    ratio_sum = sum(other_ratios)
+    normalized_ratios = [ratio / ratio_sum for ratio in other_ratios]
+    sweep_values = np.linspace(0, 1, steps)
+    fraction_list = []
+    for fraction in sweep_values:
+        point = {sweep_location: fraction}
+        remaining = 1.0 - fraction
+        for location, ratio in zip(other_locations, normalized_ratios):
+            point[location] = remaining * ratio
+        fraction_list.append(point)
+    return sweep_values, fraction_list
+
+
+def figure_5_min_envelope(
+    locations: list[str],
+    sale_values: dict[str, float],
+    bundles: list,
+) -> None:
+    """Show the rate lines and min() envelope for each cross-location bundle.
+
+    For each bundle, the individual rate lines f_loc(j) * r * p_j are straight
+    lines. The min() of those lines creates the piecewise-linear envelope with
+    visible kink points where the bottleneck switches from one fish to another.
+    """
+    cross_bundles = [
+        (name, bonus, assignments)
+        for name, bonus, assignments in bundles
+        if len({a["location"] for a in assignments}) > 1
+    ]
+    if not cross_bundles:
+        print("  No cross-location bundles, skipping figure 5")
+        return
+
+    # Build 1D sweep path using optimal allocation ratios
+    optimal = _find_optimal_fractions(locations, sale_values, bundles)
+    sweep_location = locations[0]
+    other_locations = locations[1:]
+    other_ratios = [optimal.get(loc, 0.01) for loc in other_locations]
+    sweep_values, fraction_list = _build_1d_sweep_path(
+        sweep_location, other_locations, other_ratios, steps=500,
+    )
+
+    subplot_count = len(cross_bundles)
+    figure, axes = plt.subplots(
+        subplot_count, 1,
+        figsize=(12, 4.5 * subplot_count),
+        squeeze=False,
+    )
+
+    line_colors = ["#e74c3c", "#2ecc71", "#3498db", "#9b59b6", "#f39c12"]
+    line_dashes = [(8, 4), (8, 4, 2, 4), (2, 3), (5, 2, 5, 2, 2, 2), (12, 4)]
+    line_markers = ["o", "s", "D", "^", "v"]
+
+    for bundle_index, (bundle_name, bonus, assignments) in enumerate(cross_bundles):
+        axis = axes[bundle_index, 0]
+
+        # Compute individual rate lines and min envelope
+        rate_curves: list[np.ndarray] = []
+        for assignment in assignments:
+            rates = np.array([
+                fractions.get(assignment["location"], 0)
+                * FISH_PER_HOUR
+                * assignment["probability"]
+                for fractions in fraction_list
+            ])
+            rate_curves.append(rates)
+
+        rate_matrix = np.array(rate_curves)
+        min_envelope = np.min(rate_matrix, axis=0)
+
+        # Plot individual rate lines with distinct dashes + markers
+        for fish_index, assignment in enumerate(assignments):
+            color = line_colors[fish_index % len(line_colors)]
+            dashes = line_dashes[fish_index % len(line_dashes)]
+            marker = line_markers[fish_index % len(line_markers)]
+            axis.plot(
+                sweep_values * 100,
+                rate_curves[fish_index],
+                linewidth=2,
+                linestyle="--",
+                dashes=dashes,
+                color=color,
+                alpha=0.8,
+                marker=marker,
+                markersize=5,
+                markevery=50,
+                label=(
+                    f"{assignment['fish']} @ {assignment['location']}"
+                    f" (p={assignment['probability']:.1%})"
+                ),
+            )
+
+        # Plot min() envelope (bold)
+        axis.plot(
+            sweep_values * 100,
+            min_envelope,
+            linewidth=3,
+            color="black",
+            label="min() envelope",
+        )
+
+        # Find and mark kink points (where bottleneck switches)
+        bottleneck_index = np.argmin(rate_matrix, axis=0)
+        kink_positions = np.where(np.diff(bottleneck_index) != 0)[0]
+        for kink in kink_positions:
+            kink_x = sweep_values[kink] * 100
+            kink_y = min_envelope[kink]
+            old_bottleneck = assignments[bottleneck_index[kink]]["fish"]
+            new_bottleneck = assignments[bottleneck_index[kink + 1]]["fish"]
+            axis.plot(
+                kink_x, kink_y,
+                marker="o", color="black", markersize=8, zorder=5,
+            )
+            axis.annotate(
+                f"Kink: bottleneck switches\n"
+                f"{old_bottleneck} → {new_bottleneck}",
+                xy=(kink_x, kink_y),
+                xytext=(kink_x + 8, kink_y + max(min_envelope) * 0.15),
+                fontsize=9,
+                bbox={
+                    "boxstyle": "round,pad=0.3",
+                    "facecolor": "#fff3cd",
+                    "alpha": 0.9,
+                },
+                arrowprops={"arrowstyle": "->", "color": "black"},
+            )
+
+        # Shade the min region
+        axis.fill_between(
+            sweep_values * 100, 0, min_envelope,
+            alpha=0.1, color="black",
+        )
+
+        # Mark where this bundle's min() envelope peaks
+        bundle_optimal_index = np.argmax(min_envelope)
+        bundle_optimal_x = sweep_values[bundle_optimal_index] * 100
+        bundle_optimal_y = min_envelope[bundle_optimal_index]
+        axis.axvline(
+            x=bundle_optimal_x,
+            color="green", linestyle=":", alpha=0.5,
+            label=f"Bundle peak ({bundle_optimal_x:.0f}%)",
+        )
+        axis.plot(
+            bundle_optimal_x, bundle_optimal_y,
+            marker="*", color="green", markersize=12, zorder=5,
+        )
+
+        axis.set_ylabel("Fish catch rate (fish/hr)", fontsize=11)
+        axis.set_title(
+            f"{bundle_name} (bonus ${bonus:,}):  "
+            f"rate lines and min() envelope",
+            fontsize=12, fontweight="bold",
+        )
+        axis.legend(fontsize=9, loc="upper right")
+        if bundle_index == subplot_count - 1:
+            other_label = " / ".join(
+                f"{loc} ∝ {ratio:.0%}" for loc, ratio in zip(other_locations, other_ratios)
+            )
+            axis.set_xlabel(
+                f"% time at {sweep_location}"
+                f"  (remaining split: {other_label})",
+                fontsize=11,
+            )
+
+    figure.suptitle(
+        "Piecewise-Linear Anatomy: rate lines → min() → bundle revenue",
+        fontsize=14, fontweight="bold", y=1.01,
+    )
+    figure.tight_layout()
+    output_path = OUTPUT_DIRECTORY / "5_min_envelope.png"
+    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    print(f"  Saved {output_path}")
+
+
+def figure_6_objective_decomposition(
+    locations: list[str],
+    sale_values: dict[str, float],
+    bundles: list,
+) -> dict | None:
+    """Show the full objective decomposed into its piecewise-linear components.
+
+    Along a 1D sweep, plots:
+    - The linear sales component
+    - Each bundle's min()*bonus contribution (each is piecewise-linear)
+    - The total revenue (sum of all, also piecewise-linear)
+    """
+    optimal = _find_optimal_fractions(locations, sale_values, bundles)
+    sweep_location = locations[0]
+    other_locations = locations[1:]
+    other_ratios = [optimal.get(loc, 0.01) for loc in other_locations]
+    sweep_values, fraction_list = _build_1d_sweep_path(
+        sweep_location, other_locations, other_ratios, steps=500,
+    )
+
+    # Compute sales component (linear)
+    sales_curve = np.array([
+        FISH_PER_HOUR * sum(
+            fractions.get(loc, 0) * sale_values[loc]
+            for loc in locations
+        )
+        for fractions in fraction_list
+    ])
+
+    # Compute each bundle's contribution individually
+    bundle_curves: list[tuple[str, np.ndarray, bool]] = []
+    for bundle_name, bonus, assignments in bundles:
+        bundle_locations = {a["location"] for a in assignments}
+        is_cross_location = len(bundle_locations) > 1
+        curve = []
+        for fractions in fraction_list:
+            if len(bundle_locations) == 1:
+                location = next(iter(bundle_locations))
+                fraction = fractions.get(location, 0)
+                bottleneck = min(a["probability"] for a in assignments)
+                value = fraction * FISH_PER_HOUR * bottleneck * bonus
+            else:
+                rates = [
+                    fractions.get(a["location"], 0)
+                    * FISH_PER_HOUR
+                    * a["probability"]
+                    for a in assignments
+                ]
+                value = min(rates) * bonus
+            curve.append(value)
+        bundle_curves.append((bundle_name, np.array(curve), is_cross_location))
+
+    total_curve = sales_curve + sum(curve for _, curve, _ in bundle_curves)
+
+    # Zoom: crop y-axis to show only the bundle "juice" on top
+    y_min_zoom = float(np.min(sales_curve)) * 0.98
+
+    figure, axis = plt.subplots(1, 1, figsize=(12, 7))
+
+    # Stacked components (zoomed into the top)
+    axis.fill_between(
+        sweep_values * 100, y_min_zoom, sales_curve,
+        alpha=0.4, color="#4a90d9", label="Sales (linear)",
+    )
+    axis.plot(
+        sweep_values * 100, sales_curve,
+        linewidth=1.5, color="#4a90d9", alpha=0.7,
+    )
+
+    cumulative = sales_curve.copy()
+    bundle_colors_cross = ["#e8a838", "#e67e22", "#d35400", "#c0392b"]
+    bundle_colors_single = ["#27ae60", "#2ecc71", "#1abc9c", "#16a085"]
+    cross_index = 0
+    single_index = 0
+
+    for bundle_name, curve, is_cross_location in bundle_curves:
+        if is_cross_location:
+            color = bundle_colors_cross[cross_index % len(bundle_colors_cross)]
+            cross_index += 1
+        else:
+            color = bundle_colors_single[single_index % len(bundle_colors_single)]
+            single_index += 1
+
+        new_cumulative = cumulative + curve
+        axis.fill_between(
+            sweep_values * 100, cumulative, new_cumulative,
+            alpha=0.4, color=color,
+            label=f"{bundle_name} ({'cross' if is_cross_location else 'local'})",
+        )
+        cumulative = new_cumulative
+
+    axis.plot(
+        sweep_values * 100, total_curve,
+        linewidth=3, color="black", label="Total $/hr",
+    )
+
+    # Mark optimal
+    optimal_fraction = optimal.get(sweep_location, 0) * 100
+    optimal_index = np.argmin(np.abs(sweep_values * 100 - optimal_fraction))
+    axis.plot(
+        optimal_fraction, total_curve[optimal_index],
+        marker="*", color="black", markersize=15, zorder=5,
+    )
+    axis.annotate(
+        f"Optimal: ${total_curve[optimal_index]:,.0f}/hr\n"
+        f"at {optimal_fraction:.0f}% {sweep_location}",
+        xy=(optimal_fraction, total_curve[optimal_index]),
+        xytext=(optimal_fraction + 15, total_curve[optimal_index] - 2000),
+        fontsize=10, fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": "black", "lw": 1.5},
+    )
+
+    axis.set_ylim(bottom=y_min_zoom)
+    other_label = " / ".join(
+        f"{loc} ∝ {ratio:.0%}" for loc, ratio in zip(other_locations, other_ratios)
+    )
+    axis.set_xlabel(
+        f"% time at {sweep_location}"
+        f"  (remaining split: {other_label})",
+        fontsize=11,
+    )
+    axis.set_ylabel("$/Hour", fontsize=12)
+    axis.set_title(
+        "Piecewise-Linear Objective: Stacked Components (zoomed)",
+        fontsize=13, fontweight="bold",
+    )
+    axis.legend(fontsize=9, loc="upper right", ncols=2)
+
+    figure.tight_layout()
+    output_path = OUTPUT_DIRECTORY / "6_objective_decomposition.png"
+    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    print(f"  Saved {output_path}")
+
+    # --- Return computed data for figure 7 ---
+    return {
+        "sweep_values": sweep_values,
+        "sweep_location": sweep_location,
+        "other_locations": other_locations,
+        "other_ratios": other_ratios,
+        "sales_curve": sales_curve,
+        "bundle_curves": bundle_curves,
+        "optimal_fraction": optimal_fraction,
+    }
+
+
+def figure_7_individual_components(
+    decomposition_data: dict,
+) -> None:
+    """Individual (unstacked) bundle components on their own scale."""
+    sweep_values = decomposition_data["sweep_values"]
+    sweep_location = decomposition_data["sweep_location"]
+    other_locations = decomposition_data["other_locations"]
+    other_ratios = decomposition_data["other_ratios"]
+    sales_curve = decomposition_data["sales_curve"]
+    bundle_curves = decomposition_data["bundle_curves"]
+    optimal_fraction = decomposition_data["optimal_fraction"]
+
+    bundle_colors_cross = ["#e8a838", "#e67e22", "#d35400", "#c0392b"]
+    bundle_colors_single = ["#27ae60", "#2ecc71", "#1abc9c", "#16a085"]
+
+    # Two subplots: sales on top (own scale), bundles on bottom (own scale)
+    figure, (axis_sales, axis_bundles) = plt.subplots(
+        2, 1, figsize=(12, 8), height_ratios=[1, 2],
+    )
+
+    # Sales component
+    axis_sales.plot(
+        sweep_values * 100, sales_curve,
+        linewidth=2.5, color="#4a90d9", label="Sales (linear)",
+    )
+    axis_sales.axvline(
+        x=optimal_fraction, color="green", linestyle=":", alpha=0.5,
+        label=f"Optimal ({optimal_fraction:.0f}%)",
+    )
+    axis_sales.set_ylabel("$/Hour", fontsize=11)
+    axis_sales.set_title(
+        "Sales Component (linear in allocation)",
+        fontsize=12, fontweight="bold",
+    )
+    axis_sales.legend(fontsize=9)
+
+    # Bundle components (each on the same axes, but without sales dwarfing them)
+    cross_index = 0
+    single_index = 0
+    for bundle_name, curve, is_cross_location in bundle_curves:
+        if is_cross_location:
+            color = bundle_colors_cross[cross_index % len(bundle_colors_cross)]
+            cross_index += 1
+            linestyle = "-"
+            linewidth = 2.5
+        else:
+            color = bundle_colors_single[single_index % len(bundle_colors_single)]
+            single_index += 1
+            linestyle = "--"
+            linewidth = 2
+        axis_bundles.plot(
+            sweep_values * 100, curve,
+            linewidth=linewidth, color=color, linestyle=linestyle,
+            label=f"{bundle_name} ({'cross' if is_cross_location else 'local'})",
+        )
+
+    axis_bundles.axvline(
+        x=optimal_fraction, color="green", linestyle=":", alpha=0.5,
+    )
+
+    other_label = " / ".join(
+        f"{loc} ∝ {ratio:.0%}" for loc, ratio in zip(other_locations, other_ratios)
+    )
+    axis_bundles.set_xlabel(
+        f"% time at {sweep_location}"
+        f"  (remaining split: {other_label})",
+        fontsize=11,
+    )
+    axis_bundles.set_ylabel("$/Hour", fontsize=12)
+    axis_bundles.set_title(
+        "Bundle Components (unstacked) — piecewise-linear kinks visible",
+        fontsize=12, fontweight="bold",
+    )
+    axis_bundles.legend(fontsize=9, loc="upper right", ncols=2)
+
+    figure.tight_layout()
+    output_path = OUTPUT_DIRECTORY / "7_individual_components.png"
+    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    print(f"  Saved {output_path}")
+
+
 def main() -> None:
     region_data = _load_region_data()
     locations = [
@@ -592,6 +1037,10 @@ def main() -> None:
     figure_2_revenue_decomposition(locations, sale_values, bundles)
     figure_3_bundle_bottleneck(locations, sale_values, bundles, region_data)
     figure_4_competing_forces(locations, sale_values, bundles)
+    figure_5_min_envelope(locations, sale_values, bundles)
+    decomposition_data = figure_6_objective_decomposition(locations, sale_values, bundles)
+    if decomposition_data:
+        figure_7_individual_components(decomposition_data)
     print("Done!")
 
 

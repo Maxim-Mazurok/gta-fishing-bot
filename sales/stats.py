@@ -87,7 +87,9 @@ def fit_integer_weights(
     passing = [candidate for candidate in candidates if candidate[3] > 0.05]
     if passing:
         # AIC-like scoring: balance fit quality vs complexity.
-        # Lower is better: chi_squared + 2 * (distinct_weights - 1)
+        # Complexity = distinct_weights - 1
+        # Penalizes variety of weights, not magnitude.
+        # (3,1,1) and (2,1,1) have the same complexity.
         passing.sort(key=lambda candidate: (
             candidate[2] + 2 * (len(set(candidate[1])) - 1),
             candidate[0],
