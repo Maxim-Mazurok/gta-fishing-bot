@@ -932,11 +932,8 @@ def main() -> None:
         print(f"  comparison.md updated (tier {len(unlocked)})")
 
     # Generate visualizations
-    try:
-        from visualize_allocation import main as generate_visualizations
-        generate_visualizations()
-    except ImportError:
-        print("  Skipping visualizations (matplotlib not installed)")
+    from visualize_allocation import main as generate_visualizations
+    generate_visualizations()
 
 
 if __name__ == "__main__":

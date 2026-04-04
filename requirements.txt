@@ -1,0 +1,7 @@
+matplotlib
+numpy
+opencv-python
+mss
+pydirectinput
+scipy
+pytest
