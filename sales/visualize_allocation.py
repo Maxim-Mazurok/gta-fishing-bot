@@ -4,39 +4,35 @@ Generates figures showing:
 1. Ternary heatmap of total $/hour across all allocations
 2. Revenue decomposition: sales vs bundles along the optimal path
 3. Bundle fill-rate bottleneck illustration
+4. Competing forces: sales value vs bundle completions
 """
 
-import sys
+from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.patches import FancyArrowPatch
 
-# Add parent to path so we can import the sales module
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from sales.update_sales import (
+from constants import (
     BUNDLES,
     FISH_PER_HOUR,
     PRICES,
     REGIONS,
     SALES_DIR,
+)
+from parsing import parse_log
+from update_sales import (
+    BundleFishAssignment,
     _compute_revenue,
-    _estimate_fish_probability,
     _resolve_available_bundles,
-    fish_location,
-    parse_log,
 )
 
 OUTPUT_DIRECTORY = SALES_DIR / "figures"
 OUTPUT_DIRECTORY.mkdir(exist_ok=True)
 
 
-def _load_region_data() -> dict[str, "Counter"]:
-    from collections import Counter
-
+def _load_region_data() -> dict[str, Counter]:
     region_data: dict[str, Counter] = {}
     for region_key, region_name in REGIONS.items():
         log_path = SALES_DIR / f"{region_key}-log.md"
@@ -48,7 +44,7 @@ def _load_region_data() -> dict[str, "Counter"]:
 
 
 def _compute_sale_values(
-    region_data: dict[str, "Counter"],
+    region_data: dict[str, Counter],
 ) -> dict[str, float]:
     sale_values = {}
     for location, counts in region_data.items():
@@ -251,7 +247,6 @@ def figure_2_revenue_decomposition(
     sales_revenue = []
     bundle_revenue = []
     total_revenue = []
-    fraction_labels = []
 
     for time_step in time_axis:
         fractions = {
@@ -332,7 +327,7 @@ def figure_3_bundle_bottleneck(
     locations: list[str],
     sale_values: dict[str, float],
     bundles: list,
-    region_data: dict[str, "Counter"],
+    region_data: dict[str, Counter],
 ) -> None:
     """Illustrate the min() bottleneck for a cross-location bundle."""
     # Find first cross-location bundle
@@ -348,9 +343,7 @@ def figure_3_bundle_bottleneck(
         return
 
     bundle_name, bonus, assignments = target_bundle
-    bundle_locations = [a["location"] for a in assignments]
     bundle_probabilities = [a["probability"] for a in assignments]
-    bundle_fish_names = [a["fish"] for a in assignments]
 
     # Sweep: vary the bottleneck location's fraction from 0 to balanced
     # Keep others proportional to their 1/p ratios
@@ -362,10 +355,6 @@ def figure_3_bundle_bottleneck(
         )
 
     steps = 200
-    bottleneck_index = min(
-        range(len(assignments)), key=lambda index: bundle_probabilities[index],
-    )
-    bottleneck_location = assignments[bottleneck_index]["location"]
 
     figure, axis = plt.subplots(1, 1, figsize=(10, 6))
 
@@ -376,8 +365,6 @@ def figure_3_bundle_bottleneck(
     for fish_index, assignment in enumerate(assignments):
         fill_rates = []
         for fraction_for_this_fish_location in sweep_axis:
-            # Allocate fraction_for_this_fish_location to this fish's location,
-            # distribute remaining proportionally among other locations
             remaining = 1.0 - fraction_for_this_fish_location
             other_total = sum(
                 balanced_fractions[a["location"]]
@@ -445,7 +432,6 @@ def figure_3_bundle_bottleneck(
     )
     axis.legend(fontsize=10, loc="upper left")
 
-    # Add annotation explaining min()
     axis.annotate(
         "Bundle completion rate = min(all fill rates)\n"
         "→ Must balance time to equalize rates",
@@ -469,10 +455,8 @@ def figure_4_competing_forces(
     bundles: list,
 ) -> None:
     """Show the tug-of-war between sales (go to best location) and bundles (balance)."""
-    # Sweep between balanced-for-bundles and all-at-best-sale-location
     best_sale_location = max(sale_values, key=lambda location: sale_values[location])
 
-    # Compute bundle-balanced fractions
     cross_bundles = [
         (name, bonus, assignments)
         for name, bonus, assignments in bundles
@@ -482,7 +466,6 @@ def figure_4_competing_forces(
     if not cross_bundles:
         return
 
-    # Use the biggest cross-location bundle for balancing
     biggest_bundle = max(cross_bundles, key=lambda bundle: bundle[1])
     _, _, biggest_assignments = biggest_bundle
 
@@ -491,7 +474,6 @@ def figure_4_competing_forces(
         a["location"]: (1.0 / a["probability"]) / inverse_sum
         for a in biggest_assignments
     }
-    # Fill in zero for locations not in this bundle
     for loc in locations:
         if loc not in bundle_balanced:
             bundle_balanced[loc] = 0.0
@@ -536,7 +518,6 @@ def figure_4_competing_forces(
         linewidth=3, color="black", label="Total $/hr",
     )
 
-    # Mark the optimal along this path
     optimal_index = np.argmax(total_values_curve)
     axis.plot(
         time_axis[optimal_index] * 100, total_values_curve[optimal_index],
@@ -551,7 +532,6 @@ def figure_4_competing_forces(
         arrowprops={"arrowstyle": "->", "color": "black", "lw": 1.5},
     )
 
-    # Add arrows showing the forces
     axis.annotate(
         "", xy=(5, sales_values_curve[0] - 500),
         xytext=(5, sales_values_curve[0] + 500),
