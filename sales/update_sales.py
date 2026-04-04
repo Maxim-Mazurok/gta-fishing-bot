@@ -151,6 +151,11 @@ TIER_PRICES = {
     "Humane Labs":  {1: 2150, 2: 2500, 3: 2850},
 }
 
+# Manual notes for special fish sightings (weather, etc. — can't be auto-detected)
+SPECIAL_FISH_NOTES: dict[str, str] = {
+    "3 Eyed Fish": "heavy storm",
+}
+
 # Time per fish (seconds)
 SECONDS_WAITING_FOR_BITE = 100  # decreases with level ups
 SECONDS_REELING_IN = 15         # improves with skill
@@ -311,6 +316,77 @@ def build_prices_table() -> str:
     ]
     for row in data:
         lines.append(fmt(*row))
+    return "\n".join(lines)
+
+
+def build_special_fish_section(region_counts: dict[str, Counter]) -> str:
+    """Build the special fish section with auto-detected sightings."""
+    special_fish = [
+        (name, price, stars, color)
+        for name, (price, stars, color) in PRICES.items()
+        if stars >= 4 or stars == 0
+    ]
+    if not special_fish:
+        return ""
+
+    # Auto-detect sightings from log data
+    sightings: dict[str, list[str]] = {}
+    for region_name, counts in region_counts.items():
+        for fish_name in counts:
+            if fish_name in PRICES:
+                _price, star_count, _color = PRICES[fish_name]
+                if star_count >= 4 or star_count == 0:
+                    sightings.setdefault(fish_name, []).append(region_name)
+
+    data = []
+    for name, price, stars, color in special_fish:
+        price_string = f"${price:,}"
+        if stars == 0:
+            stars_string = "-"
+        else:
+            stars_string = "\u2605" * stars
+            if color:
+                stars_string += f" {color}"
+        locations = sightings.get(name, [])
+        note = SPECIAL_FISH_NOTES.get(name, "")
+        if locations and note:
+            sightings_string = ", ".join(
+                f"{location} ({note})" for location in locations
+            )
+        elif locations:
+            sightings_string = ", ".join(locations)
+        else:
+            sightings_string = ""
+        data.append((name, price_string, stars_string, sightings_string))
+
+    name_width = max(len("Fish"), max(len(row[0]) for row in data))
+    price_width = max(len("Price"), max(len(row[1]) for row in data))
+    stars_width = max(len("Stars"), max(len(row[2]) for row in data))
+    sightings_width = max(len("Sightings"), max(len(row[3]) for row in data))
+
+    def format_special(
+        name: str, price: str, stars: str, sighting: str,
+    ) -> str:
+        return (
+            f"| {name:<{name_width}} | {price:>{price_width}}"
+            f" | {stars:<{stars_width}} | {sighting:<{sightings_width}} |"
+        )
+
+    lines = [
+        "## Special Fish",
+        "",
+        "Special fish (\u2605\u2605\u2605\u2605 purple) are zone-independent"
+        " \u2014 they can appear at any fishing location.",
+        "Heavy storm weather may increase chances.",
+        "",
+        format_special("Fish", "Price", "Stars", "Sightings"),
+        (
+            f"|{'-' * (name_width + 2)}|{'-' * (price_width + 1)}:"
+            f"|{'-' * (stars_width + 2)}|{'-' * (sightings_width + 2)}|"
+        ),
+    ]
+    for row in data:
+        lines.append(format_special(*row))
     return "\n".join(lines)
 
 
@@ -636,7 +712,7 @@ def build_drop_rate_analysis(region_counts: dict[str, Counter]) -> str:
     tier_data: dict[str, dict[int, tuple[int, int]]] = {}
     for region_name, counts in region_counts.items():
         total = sum(counts.values())
-        tier_totals: dict[int, int] = {1: 0, 2: 0, 3: 0}
+        tier_totals: dict[int, int] = {1: 0, 2: 0, 3: 0, 4: 0}
         for fish_name, fish_count in counts.items():
             if fish_name in PRICES:
                 _price, star_count, _color = PRICES[fish_name]
@@ -649,9 +725,17 @@ def build_drop_rate_analysis(region_counts: dict[str, Counter]) -> str:
 
     region_names = list(region_counts.keys())
 
+    # Only include ★★★★ row if any location caught a special fish
+    has_specials = any(
+        tier_data[region_name][4][0] > 0 for region_name in region_names
+    )
+    tier_levels = [4, 3, 2, 1] if has_specials else [3, 2, 1]
+
     tier_rows: list[tuple[str, ...]] = []
-    for stars in [3, 2, 1]:
+    for stars in tier_levels:
         star_label = "\u2605" * stars
+        if stars == 4:
+            star_label += " purple"
         values: list[str] = [star_label]
         percentages: list[float] = []
         for region_name in region_names:
@@ -710,14 +794,14 @@ def build_drop_rate_analysis(region_counts: dict[str, Counter]) -> str:
     ])
 
     for region_name, counts in region_counts.items():
-        tiers: dict[int, list[tuple[str, int]]] = {1: [], 2: [], 3: []}
+        tiers: dict[int, list[tuple[str, int]]] = {1: [], 2: [], 3: [], 4: []}
         for fish_name, fish_count in counts.items():
             if fish_name in PRICES:
                 _price, star_count, _color = PRICES[fish_name]
                 if star_count in tiers:
                     tiers[star_count].append((fish_name, fish_count))
 
-        for stars in [3, 2, 1]:
+        for stars in [4, 3, 2, 1]:
             fish_in_tier = tiers[stars]
             if len(fish_in_tier) < 2:
                 continue
@@ -808,6 +892,15 @@ def main() -> None:
     for key, name in REGIONS.items():
         update_md(key, name)
 
+    # Collect region counts (used by prices.md and comparison.md)
+    region_counts: dict[str, Counter] = {}
+    for region_key, region_name in REGIONS.items():
+        log_path = SALES_DIR / f"{region_key}-log.md"
+        if log_path.exists():
+            counts = parse_log(log_path)
+            if counts:
+                region_counts[region_name] = counts
+
     # Write bundles.md
     bundles_md = SALES_DIR / "bundles.md"
     table = build_bundles_table()
@@ -824,7 +917,14 @@ def main() -> None:
 |--------------|-------:|-------:|-------:|"""
     for location, tiers in TIER_PRICES.items():
         prices_header += f"\n| {location:<12} | ${tiers[1]:,} | ${tiers[2]:,} | ${tiers[3]:,} |"
-    prices_header += "\n\nGreen stars (★ green) = Humane Labs tier. Special fish have fixed prices.\n\n## All Fish\n\n"
+    prices_header += (
+        "\n\nGreen stars (\u2605 green) = Humane Labs tier."
+        " Special fish have fixed prices.\n\n"
+    )
+    special_section = build_special_fish_section(region_counts)
+    if special_section:
+        prices_header += special_section + "\n\n"
+    prices_header += "## All Fish\n\n"
     table = build_prices_table()
     prices_md.write_text(prices_header + table + "\n", encoding="utf-8")
     print(f"  prices.md updated ({len(PRICES)} fish)")
@@ -832,14 +932,6 @@ def main() -> None:
     # Write comparison.md
     comparison_table = build_comparison_table()
     if comparison_table:
-        region_counts: dict[str, Counter] = {}
-        for region_key, region_name in REGIONS.items():
-            log_path = SALES_DIR / f"{region_key}-log.md"
-            if log_path.exists():
-                counts = parse_log(log_path)
-                if counts:
-                    region_counts[region_name] = counts
-
         bundle_details = build_bundle_details(region_counts)
         drop_rate_analysis = build_drop_rate_analysis(region_counts)
         time_note = (

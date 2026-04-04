@@ -21,11 +21,12 @@ Assuming 100s wait for bite + 15s reel-in = 115s per fish (31.3 fish/hour).
 
 Tier drop rates are consistent across locations, suggesting a fixed game mechanic:
 
-| Tier | Alamo Sea | Land Act Dam | Average |
-|------|----------:|-------------:|--------:|
-| ★★★  |      6.5% |        11.3% |    8.9% |
-| ★★   |     26.6% |        27.6% |   27.1% |
-| ★    |     65.9% |        61.1% |   63.5% |
+| Tier        | Alamo Sea | Land Act Dam | Average |
+|-------------|----------:|-------------:|--------:|
+| ★★★★ purple |      0.2% |         0.0% |    0.1% |
+| ★★★         |      6.5% |        11.3% |    8.9% |
+| ★★          |     26.6% |        27.6% |   27.1% |
+| ★           |     65.9% |        61.1% |   63.5% |
 
 ### Within-Tier Weights
 

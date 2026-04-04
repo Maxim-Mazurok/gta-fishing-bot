@@ -13,6 +13,18 @@
 
 Green stars (★ green) = Humane Labs tier. Special fish have fixed prices.
 
+## Special Fish
+
+Special fish (★★★★ purple) are zone-independent — they can appear at any fishing location.
+Heavy storm weather may increase chances.
+
+| Fish                 |   Price | Stars       | Sightings               |
+|----------------------|--------:|-------------|-------------------------|
+| Chadfin              |  $8,150 | -           |                         |
+| 3 Eyed Fish          | $10,000 | ★★★★ purple | Alamo Sea (heavy storm) |
+| Pufferfish w/ Carrot | $10,000 | ★★★★ purple |                         |
+| Baby Pufferfish      | $10,000 | ★★★★ purple |                         |
+
 ## All Fish
 
 | Fish                 |   Price | Stars       | Location     |
