@@ -1,11 +1,16 @@
 # Location Comparison
 
+Detected tier: 3 (Alamo Sea, Land Act Dam, Roxwood).
+
 Assuming 100s wait for bite + 15s reel-in = 115s per fish (31.3 fish/hour).
 
-| Location     | Fish Caught | $/Fish (sales) | Available Bundles | $/Fish (bundles) | $/Fish (total) |  $/Hour |
-|--------------|------------:|---------------:|-------------------|-----------------:|---------------:|--------:|
-| Alamo Sea    |         417 |         $1,483 | Alamo Starter     |             $216 |     **$1,699** | $53,180 |
-| Land Act Dam |         203 |         $1,670 | none              |               $0 |     **$1,670** | $52,284 |
+~ = estimated (not yet observed in catch data)
+
+| Location     | Fish Caught | $/Fish (sales) | Available Bundles                                      | $/Fish (bundles) | $/Fish (total) |  $/Hour |
+|--------------|------------:|---------------:|--------------------------------------------------------|-----------------:|---------------:|--------:|
+| Alamo Sea    |         420 |         $1,472 | Gold Multizone #1~, Alamo Starter, Low Level Multizone |             $655 |     **$2,127** | $66,595 |
+| Land Act Dam |         203 |         $1,670 | Gold Multizone #1~, Low Level Multizone                |             $393 |     **$2,063** | $64,583 |
+| Roxwood      |          35 |         $1,794 | Gold Multizone #1~, Low Level Multizone                |             $371 |     **$2,166** | $67,796 |
 
 ## Bundle Details
 
@@ -13,7 +18,14 @@ Assuming 100s wait for bite + 15s reel-in = 115s per fish (31.3 fish/hour).
 
 | Bundle        | Fish                                     |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                              |
 |---------------|------------------------------------------|--------:|---------------------:|---------:|-----------:|------------------------------------------------------------------------------------------|
-| Alamo Starter | Morwhong, Southern Tuna, Silver Trevally | $10,000 |                   57 |  109 min |       $175 | Morwhong: 27/417 (6.5%) \| Southern Tuna: 9/417 (2.2%) \| Silver Trevally: 17/417 (4.1%) |
+| Alamo Starter | Morwhong, Southern Tuna, Silver Trevally | $10,000 |                   57 |  110 min |       $174 | Morwhong: 27/420 (6.4%) \| Southern Tuna: 9/420 (2.1%) \| Silver Trevally: 17/420 (4.0%) |
+
+### Cross-Location
+
+| Bundle              | Fish                             |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                                                          |
+|---------------------|----------------------------------|--------:|---------------------:|---------:|-----------:|----------------------------------------------------------------------------------------------------------------------|
+| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  185 |  354 min |        $69 | Bluefin Tuna @ Alamo Sea: 3/420 (0.7%) \| Musky @ Land Act Dam: 11/203 (5.4%) \| Dolphinfish @ Roxwood: ~3.8% (est.) |
+| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   49 |   94 min |       $225 | Scollop @ Alamo Sea: 47/420 (11.2%) \| Carp @ Land Act Dam: 9/203 (4.4%) \| Grenadier @ Roxwood: 2/35 (5.7%)         |
 
 ## Drop Rate Analysis
 
@@ -21,12 +33,12 @@ Assuming 100s wait for bite + 15s reel-in = 115s per fish (31.3 fish/hour).
 
 Tier drop rates are consistent across locations, suggesting a fixed game mechanic:
 
-| Tier        | Alamo Sea | Land Act Dam | Average |
-|-------------|----------:|-------------:|--------:|
-| ★★★★ purple |      0.2% |         0.0% |    0.1% |
-| ★★★         |      6.5% |        11.3% |    8.9% |
-| ★★          |     26.6% |        27.6% |   27.1% |
-| ★           |     65.9% |        61.1% |   63.5% |
+| Tier        | Alamo Sea | Land Act Dam | Roxwood | Average |
+|-------------|----------:|-------------:|--------:|--------:|
+| ★★★★ purple |      0.2% |         0.0% |    0.0% |    0.1% |
+| ★★★         |      6.4% |        11.3% |   11.4% |    9.7% |
+| ★★          |     26.4% |        27.6% |   25.7% |   26.6% |
+| ★           |     65.5% |        61.1% |   62.9% |   63.1% |
 
 ### Within-Tier Weights
 
@@ -106,3 +118,39 @@ Fitted smallest integer weights per fish using χ² goodness-of-fit (p > 0.05 = 
 | Brook Trout      |     7 |       5.6% |      2 |       7.4% |     -2.2 |
 
 χ² = 2.46, df = 7, p = 0.930 — excellent fit
+
+#### Roxwood — ★★★ (2 fish, 4 observed)
+
+| Fish          | Count | Observed % | Weight | Expected % | Residual |
+|---------------|------:|-----------:|-------:|-----------:|---------:|
+| King Mackerel |     2 |      50.0% |      1 |      50.0% |     +0.0 |
+| Grenadier     |     2 |      50.0% |      1 |      50.0% |     +0.0 |
+
+χ² = 0.00, df = 1, p = 1.000 — excellent fit
+
+#### Roxwood — ★★ (6 fish, 9 observed)
+
+| Fish         | Count | Observed % | Weight | Expected % | Residual |
+|--------------|------:|-----------:|-------:|-----------:|---------:|
+| Snapper      |     2 |      22.2% |      1 |      16.7% |     +0.5 |
+| Gummy Shark  |     2 |      22.2% |      1 |      16.7% |     +0.5 |
+| Silver Perch |     2 |      22.2% |      1 |      16.7% |     +0.5 |
+| Amberjack    |     1 |      11.1% |      1 |      16.7% |     -0.5 |
+| Brown Trout  |     1 |      11.1% |      1 |      16.7% |     -0.5 |
+| Red Snapper  |     1 |      11.1% |      1 |      16.7% |     -0.5 |
+
+χ² = 1.00, df = 5, p = 0.963 — excellent fit
+
+#### Roxwood — ★ (7 fish, 22 observed)
+
+| Fish               | Count | Observed % | Weight | Expected % | Residual |
+|--------------------|------:|-----------:|-------:|-----------:|---------:|
+| Grouper            |     8 |      36.4% |     10 |      35.7% |     +0.1 |
+| Australian Herring |     4 |      18.2% |      3 |      10.7% |     +1.6 |
+| Sand Whiting       |     3 |      13.6% |      3 |      10.7% |     +0.6 |
+| Sandy Sprat        |     2 |       9.1% |      3 |      10.7% |     -0.4 |
+| Ocean Perch        |     2 |       9.1% |      3 |      10.7% |     -0.4 |
+| Dungeness Crab     |     2 |       9.1% |      3 |      10.7% |     -0.4 |
+| Ocean Jacket       |     1 |       4.5% |      3 |      10.7% |     -1.4 |
+
+χ² = 2.27, df = 6, p = 0.894 — excellent fit

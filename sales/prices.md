@@ -36,8 +36,8 @@ Heavy storm weather may increase chances.
 | Silver Perch         |  $2,000 | ★★          | Roxwood      |
 | Orange Roughy        |  $2,150 | ★ green     | Humane Labs  |
 | Mulloway             |  $2,150 | ★ green     | Humane Labs  |
-| Snapper              |  $2,150 | ★ green     | Humane Labs  |
-| Blackfin Tuna        |  $2,000 | ★★          | Roxwood      |
+| Snapper              |  $2,000 | ★★          | Roxwood      |
+| Blackfin Tuna        |  $2,150 | ★ green     | Humane Labs  |
 | Oreo Dory            |  $2,350 | ★★          | Cave         |
 | Ling                 |  $2,350 | ★★          | Cave         |
 | Atlantic Wolffish    |  $2,150 | ★ green     | Humane Labs  |

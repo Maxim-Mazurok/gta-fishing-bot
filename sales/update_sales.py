@@ -44,8 +44,8 @@ PRICES: dict[str, tuple[int, int, str]] = {
     "Silver Perch": (2000, 2, ""),
     "Orange Roughy": (2150, 1, "green"),
     "Mulloway": (2150, 1, "green"),
-    "Snapper": (2150, 1, "green"),
-    "Blackfin Tuna": (2000, 2, ""),
+    "Snapper": (2000, 2, ""),
+    "Blackfin Tuna": (2150, 1, "green"),
     "Oreo Dory": (2350, 2, ""),
     "Ling": (2350, 2, ""),
     "Atlantic Wolffish": (2150, 1, "green"),
@@ -176,7 +176,7 @@ def parse_log(path: Path) -> Counter:
         line = line.strip()
         if not line or line == "--sold":
             continue
-        m = re.match(r"^(.+?)\t(\d+)$", line)
+        m = re.match(r"^(.+?)(?:\t|  )(\d+)$", line)
         if m:
             name, count = m.group(1), int(m.group(2))
             totals[name] += count
@@ -286,6 +286,89 @@ def get_location(price: int, stars: int, color: str) -> str:
         if tier_prices.get(stars) == price:
             return location
     return "Unknown"
+
+
+def fish_location(name: str) -> str:
+    """Determine which location a fish belongs to based on its price and star tier."""
+    if name not in PRICES:
+        return "Unknown"
+    price, star_count, color = PRICES[name]
+    return get_location(price, star_count, color)
+
+
+# Count fish species per (location, star_tier) for probability estimation
+_LOCATION_TIER_SPECIES: dict[str, dict[int, int]] = {}
+for _name, (_price, _stars, _color) in PRICES.items():
+    _location = fish_location(_name)
+    if _location not in ("Unknown", "Special"):
+        _LOCATION_TIER_SPECIES.setdefault(_location, {})
+        _LOCATION_TIER_SPECIES[_location][_stars] = (
+            _LOCATION_TIER_SPECIES[_location].get(_stars, 0) + 1
+        )
+
+LOCATION_ORDER = list(REGIONS.values())
+
+
+def _detect_unlocked_locations() -> list[str]:
+    """Auto-detect unlocked locations based on which have log data.
+
+    Returns all locations from the first up to the highest one with a log file,
+    since locations unlock in order.
+    """
+    highest_index = -1
+    for region_key, region_name in REGIONS.items():
+        log_path = SALES_DIR / f"{region_key}-log.md"
+        if log_path.exists():
+            counts = parse_log(log_path)
+            if counts:
+                index = LOCATION_ORDER.index(region_name)
+                if index > highest_index:
+                    highest_index = index
+    if highest_index < 0:
+        return []
+    return LOCATION_ORDER[:highest_index + 1]
+
+
+def _bundle_min_tier(bundle_name: str) -> int | None:
+    """Return the minimum tier (1-based index) needed for a bundle.
+
+    Returns None if any fish has an unknown location.
+    """
+    bundle_info = BUNDLES[bundle_name]
+    max_index = -1
+    for fish in bundle_info["fish"]:
+        location = fish_location(fish)
+        if location not in LOCATION_ORDER:
+            return None
+        index = LOCATION_ORDER.index(location)
+        if index > max_index:
+            max_index = index
+    return max_index + 1
+
+
+def _estimate_fish_probability(
+    fish_name: str,
+    location: str,
+    location_counts: Counter,
+) -> float | None:
+    """Estimate the catch probability for an unseen fish at a location.
+
+    Uses the location's observed tier distribution and the total species count
+    in that tier to estimate an equal-weight probability.
+    """
+    _, star_count, _ = PRICES[fish_name]
+    total = sum(location_counts.values())
+
+    tier_caught = sum(
+        count for name, count in location_counts.items()
+        if name in PRICES and PRICES[name][1] == star_count
+    )
+    if tier_caught == 0:
+        return None
+
+    species_in_tier = _LOCATION_TIER_SPECIES.get(location, {}).get(star_count, 1)
+    tier_rate = tier_caught / total
+    return tier_rate / species_in_tier
 
 
 def build_prices_table() -> str:
@@ -410,24 +493,126 @@ def update_md(region_key: str, region_name: str) -> None:
     print(f"  {region_key}.md updated ({len(counts)} fish, {batches} batches)")
 
 
+def _compute_bundle_contributions(
+    region_data: dict[str, Counter],
+) -> dict[str, list[tuple[str, float, bool]]]:
+    """Compute per-fish bundle bonus for each location.
+
+    For single-location bundles, uses the bottleneck probability approximation:
+    bonus_per_fish = min(p_i) * bonus.
+
+    For cross-location (multizone) bundles, each bundle fish is assigned to the
+    location with the highest catch probability. The bonus per fish is then
+    bonus / sum(1/p_i), distributed equally to all contributing locations.
+
+    Uses tier-based detection: a bundle is considered if all its fish belong to
+    unlocked locations. For fish not yet observed, probabilities are estimated
+    from the location's tier distribution.
+
+    Returns: {region_name: [(bundle_name, bonus_per_fish, is_estimated), ...]}.
+    """
+    unlocked = _detect_unlocked_locations()
+    contributions: dict[str, list[tuple[str, float, bool]]] = {}
+
+    for bundle_name, bundle_info in BUNDLES.items():
+        min_tier = _bundle_min_tier(bundle_name)
+        if min_tier is None or min_tier > len(unlocked):
+            continue
+
+        fish_assignments: list[tuple[str, str, float]] = []
+        all_resolved = True
+        any_estimated = False
+
+        for fish in bundle_info["fish"]:
+            home_location = fish_location(fish)
+            best_location = None
+            best_probability = 0.0
+
+            # Check actual catch data across all locations
+            for region_name, counts in region_data.items():
+                if fish in counts:
+                    total_fish = sum(counts.values())
+                    probability = counts[fish] / total_fish
+                    if probability > best_probability:
+                        best_probability = probability
+                        best_location = region_name
+
+            # If not found in catch data, estimate at home location
+            if best_location is None:
+                home_counts = region_data.get(home_location)
+                if home_counts:
+                    estimated = _estimate_fish_probability(
+                        fish, home_location, home_counts,
+                    )
+                    if estimated:
+                        best_probability = estimated
+                        best_location = home_location
+                        any_estimated = True
+
+            if best_location is None:
+                all_resolved = False
+                break
+
+            fish_assignments.append((fish, best_location, best_probability))
+
+        if not all_resolved:
+            continue
+
+        contributing_locations = {location for _, location, _ in fish_assignments}
+
+        if len(contributing_locations) == 1:
+            location = next(iter(contributing_locations))
+            bottleneck_probability = min(p for _, _, p in fish_assignments)
+            bonus_per_fish = bottleneck_probability * bundle_info["bonus"]
+            contributions.setdefault(location, []).append(
+                (bundle_name, bonus_per_fish, any_estimated)
+            )
+        else:
+            # Each location earns p_i * (bonus / N) per fish, where p_i is the
+            # probability of catching the bundle fish at that location and N is
+            # the number of fish in the bundle.
+            fish_count = len(fish_assignments)
+            bonus_per_slot = bundle_info["bonus"] / fish_count
+            for _, location, probability in fish_assignments:
+                bonus_per_fish = probability * bonus_per_slot
+                contributions.setdefault(location, []).append(
+                    (bundle_name, bonus_per_fish, any_estimated)
+                )
+
+    return contributions
+
+
 def build_comparison_table() -> str:
     """Build a revenue comparison table using total fish frequencies.
 
     For each location with data, computes:
     - Expected $/fish from sales (weighted average price by catch frequency)
     - Which bundles are available and their probability-weighted bonus per fish
+      (both single-location and cross-location bundles)
     - Total expected $/fish
     """
-    rows = []
+    # Collect all region data first
+    region_data: dict[str, Counter] = {}
     for region_key, region_name in REGIONS.items():
         log_path = SALES_DIR / f"{region_key}-log.md"
         if not log_path.exists():
             continue
-
         counts = parse_log(log_path)
         if not counts:
             continue
+        region_data[region_name] = counts
 
+    if not region_data:
+        return ""
+
+    bundle_contributions = _compute_bundle_contributions(region_data)
+
+    rows = []
+    for region_key, region_name in REGIONS.items():
+        if region_name not in region_data:
+            continue
+
+        counts = region_data[region_name]
         total_fish = sum(counts.values())
 
         # Weighted average sale price per fish
@@ -438,29 +623,16 @@ def build_comparison_table() -> str:
         )
         sale_value_per_fish = total_sale_value / total_fish
 
-        # Bundle value per fish:
-        # For each bundle, compute the probability that a random fish contributes
-        # to completing it. The bottleneck is the rarest fish in the bundle.
-        # Expected completions per N fish ≈ min(probability_i) * N for each bundle.
-        # So bundle value per fish = sum(min_prob * bonus) for each available bundle.
-        bundle_value_per_fish = 0.0
-        available_bundles = []
-        for bundle_name, bundle_info in BUNDLES.items():
-            fish_probabilities = []
-            for fish in bundle_info["fish"]:
-                if fish not in counts:
-                    break
-                fish_probabilities.append(counts[fish] / total_fish)
-            else:
-                # All fish in this bundle were caught at this location
-                bottleneck_probability = min(fish_probabilities)
-                bundle_contribution = bottleneck_probability * bundle_info["bonus"]
-                bundle_value_per_fish += bundle_contribution
-                available_bundles.append(bundle_name)
+        location_bundles = bundle_contributions.get(region_name, [])
+        bundle_value_per_fish = sum(bonus for _, bonus, _ in location_bundles)
+        available_bundle_names = [
+            f"{name}~" if estimated else name
+            for name, _, estimated in location_bundles
+        ]
 
         total_value_per_fish = sale_value_per_fish + bundle_value_per_fish
 
-        bundles_string = ", ".join(available_bundles) if available_bundles else "none"
+        bundles_string = ", ".join(available_bundle_names) if available_bundle_names else "none"
         revenue_per_hour = total_value_per_fish * FISH_PER_HOUR
 
         rows.append((
@@ -531,6 +703,7 @@ def build_bundle_details(region_counts: dict[str, Counter]) -> str:
     """Build a bundle details section showing expected fish per bundle completion."""
     sections = []
 
+    # Single-location bundles (per region)
     for region_name, counts in region_counts.items():
         total_fish = sum(counts.values())
         bundle_rows = []
@@ -575,10 +748,10 @@ def build_bundle_details(region_counts: dict[str, Counter]) -> str:
 
         bundle_right_columns = {2, 3, 4, 5}
 
-        def format_bundle_row(*values: str) -> str:
+        def format_bundle_row(*values: str, _widths=widths) -> str:
             return "| " + " | ".join(
-                f"{value:>{widths[column]}}" if column in bundle_right_columns
-                else f"{value:<{widths[column]}}"
+                f"{value:>{_widths[column]}}" if column in bundle_right_columns
+                else f"{value:<{_widths[column]}}"
                 for column, value in enumerate(values)
             ) + " |"
 
@@ -592,6 +765,115 @@ def build_bundle_details(region_counts: dict[str, Counter]) -> str:
         lines.append("|" + "|".join(separator_parts) + "|")
         for row in bundle_rows:
             lines.append(format_bundle_row(*row))
+        sections.append("\n".join(lines))
+
+    # Cross-location bundles (tier-aware with estimation)
+    unlocked = _detect_unlocked_locations()
+    cross_location_rows = []
+    for bundle_name, bundle_info in BUNDLES.items():
+        min_tier = _bundle_min_tier(bundle_name)
+        if min_tier is None or min_tier > len(unlocked):
+            continue
+
+        fish_assignments: list[tuple[str, str, float, str]] = []
+        all_resolved = True
+        for fish in bundle_info["fish"]:
+            home_location = fish_location(fish)
+            best_location = None
+            best_probability = 0.0
+            best_count = 0
+            best_total = 0
+
+            for region_name, counts in region_counts.items():
+                if fish in counts:
+                    total_fish = sum(counts.values())
+                    probability = counts[fish] / total_fish
+                    if probability > best_probability:
+                        best_probability = probability
+                        best_location = region_name
+                        best_count = counts[fish]
+                        best_total = total_fish
+
+            if best_location is not None:
+                detail = (
+                    f"{fish} @ {best_location}:"
+                    f" {best_count}/{best_total} ({best_probability:.1%})"
+                )
+            else:
+                home_counts = region_counts.get(home_location)
+                if home_counts:
+                    estimated = _estimate_fish_probability(
+                        fish, home_location, home_counts,
+                    )
+                    if estimated:
+                        best_probability = estimated
+                        best_location = home_location
+                        detail = (
+                            f"{fish} @ {home_location}: ~{estimated:.1%} (est.)"
+                        )
+
+            if best_location is None:
+                all_resolved = False
+                break
+            fish_assignments.append(
+                (fish, best_location, best_probability, detail)
+            )
+
+        if not all_resolved:
+            continue
+
+        contributing_locations = {
+            location for _, location, _, _ in fish_assignments
+        }
+        if len(contributing_locations) <= 1:
+            continue
+
+        total_expected_fish = sum(
+            1.0 / p for _, _, p, _ in fish_assignments
+        )
+        expected_time_minutes = total_expected_fish * SECONDS_PER_FISH / 60
+        bonus_per_fish = bundle_info["bonus"] / total_expected_fish
+        fish_details = [detail for _, _, _, detail in fish_assignments]
+        cross_location_rows.append((
+            bundle_name,
+            ", ".join(bundle_info["fish"]),
+            f"${bundle_info['bonus']:,}",
+            f"{total_expected_fish:.0f}",
+            f"{expected_time_minutes:.0f} min",
+            f"${bonus_per_fish:,.0f}",
+            " \\| ".join(fish_details),
+        ))
+
+    if cross_location_rows:
+        headers = (
+            "Bundle", "Fish", "Bonus",
+            "Avg Fish to Complete", "Avg Time", "Bonus/Fish", "Catch Rates",
+        )
+        widths = [
+            max(len(headers[column]),
+                max(len(row[column]) for row in cross_location_rows))
+            for column in range(len(headers))
+        ]
+
+        cross_right_columns = {2, 3, 4, 5}
+
+        def format_cross_row(*values: str, _widths=widths) -> str:
+            return "| " + " | ".join(
+                f"{value:>{_widths[column]}}" if column in cross_right_columns
+                else f"{value:<{_widths[column]}}"
+                for column, value in enumerate(values)
+            ) + " |"
+
+        lines = ["### Cross-Location", "", format_cross_row(*headers)]
+        separator_parts = []
+        for column in range(len(headers)):
+            if column in cross_right_columns:
+                separator_parts.append(f"{'-' * (widths[column] + 1)}:")
+            else:
+                separator_parts.append(f"{'-' * (widths[column] + 2)}")
+        lines.append("|" + "|".join(separator_parts) + "|")
+        for row in cross_location_rows:
+            lines.append(format_cross_row(*row))
         sections.append("\n".join(lines))
 
     if not sections:
@@ -932,6 +1214,11 @@ def main() -> None:
     # Write comparison.md
     comparison_table = build_comparison_table()
     if comparison_table:
+        unlocked = _detect_unlocked_locations()
+        tier_note = (
+            f"Detected tier: {len(unlocked)}"
+            f" ({', '.join(unlocked)})."
+        )
         bundle_details = build_bundle_details(region_counts)
         drop_rate_analysis = build_drop_rate_analysis(region_counts)
         time_note = (
@@ -940,7 +1227,11 @@ def main() -> None:
             f" = {SECONDS_PER_FISH}s per fish"
             f" ({FISH_PER_HOUR:.1f} fish/hour)."
         )
-        content = f"# Location Comparison\n\n{time_note}\n\n{comparison_table}\n"
+        estimated_note = "~ = estimated (not yet observed in catch data)"
+        content = (
+            f"# Location Comparison\n\n{tier_note}\n\n{time_note}\n\n"
+            f"{estimated_note}\n\n{comparison_table}\n"
+        )
         if bundle_details:
             content += f"\n{bundle_details}\n"
         if drop_rate_analysis:
@@ -948,7 +1239,7 @@ def main() -> None:
 
         comparison_md = SALES_DIR / "comparison.md"
         comparison_md.write_text(content, encoding="utf-8")
-        print("  comparison.md updated")
+        print(f"  comparison.md updated (tier {len(unlocked)})")
 
 
 if __name__ == "__main__":
