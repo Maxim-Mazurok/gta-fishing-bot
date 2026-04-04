@@ -54,3 +54,15 @@ Blue Warehou	1
 Southern Garfish	4
 Southern Tuna	1
 Snow Crab	1
+--sold
+Albacore	5
+Broadbill	6
+Blue Warehou	2
+Southern Tuna	1
+Redfish	2
+Trout	4
+Silver Trevally	3
+Halibut	3
+Flathead	2
+Scollop	3
+Morwhong	3
