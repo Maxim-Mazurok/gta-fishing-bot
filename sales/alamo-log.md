@@ -55,14 +55,19 @@ Southern Garfish	4
 Southern Tuna	1
 Snow Crab	1
 --sold
-Albacore	5
-Broadbill	6
-Blue Warehou	2
-Southern Tuna	1
-Redfish	2
-Trout	4
-Silver Trevally	3
-Halibut	3
-Flathead	2
-Scollop	3
-Morwhong	3
+Blue Warehou	7
+Southern Garfish	11
+Southern Tuna	5
+Snow Crab	3
+Albacore	30
+Flathead	17
+Halibut	19
+Redfish	13
+Morwhong	13
+Broadbill	13
+Scollop	21
+Trout	9
+Golden Perch	5
+Silver Trevally	5
+Great Barracuda	3
+--sold
