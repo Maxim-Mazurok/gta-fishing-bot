@@ -5,6 +5,7 @@ text), locates the grid slots, and shift+clicks the second row first column
 to move items. Rate-limited to at most once every 26 seconds.
 """
 
+import os
 import time
 import cv2
 import numpy as np
@@ -17,6 +18,10 @@ pytesseract.pytesseract.tesseract_cmd = (
 
 # Rate limit: minimum seconds between shift+clicks
 INVENTORY_ACTION_COOLDOWN = 26.0
+
+# Grid slot to shift+click (0-indexed). Configure via env vars.
+INVENTORY_ROW = int(os.environ.get('INVENTORY_ROW', '0'))
+INVENTORY_COL = int(os.environ.get('INVENTORY_COL', '3'))
 
 
 class InventoryHandler:
@@ -64,8 +69,8 @@ class InventoryHandler:
         if not self._detect_inventory_text(img):
             return False
 
-        # --- Step 2: Find the grid slot at row 1, column 4 (0-indexed: row=0, col=3) ---
-        slot_center = self._find_grid_slot(img, row=0, col=3)
+        # --- Step 2: Find the grid slot (configured via INVENTORY_ROW/INVENTORY_COL env vars) ---
+        slot_center = self._find_grid_slot(img, row=INVENTORY_ROW, col=INVENTORY_COL)
         if slot_center is None:
             return False
 
