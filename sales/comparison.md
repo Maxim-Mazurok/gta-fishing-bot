@@ -49,17 +49,17 @@ Tier drop rates are consistent across locations, suggesting a fixed game mechani
 
 | Tier        | Alamo Sea |   Dam | Roxwood | Average |
 |-------------|----------:|------:|--------:|--------:|
-| ★★★★ purple |      0.2% |  0.0% |    0.4% |    0.2% |
-| ★★★         |      6.4% | 10.1% |    9.0% |    8.5% |
-| ★★          |     26.4% | 28.1% |   30.9% |   28.4% |
-| ★           |     65.5% | 61.8% |   59.4% |   62.2% |
+| xxxx purple |      0.2% |  0.0% |    0.4% |    0.2% |
+| xxx         |      6.4% | 10.1% |    9.0% |    8.5% |
+| xx          |     26.4% | 28.1% |   30.9% |   28.4% |
+| x           |     65.5% | 61.8% |   59.4% |   62.2% |
 
 ### Within-Tier Weights
 
 Observed frequencies vs model (percentage template) per fish.
 Model uses shared percentage templates across all locations (5% granularity).
 
-#### Alamo Sea — ★★★ (3 fish, 27 observed)
+#### Alamo Sea — xxx (3 fish, 27 observed)
 
 | Fish            | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |-----------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -70,7 +70,7 @@ Model uses shared percentage templates across all locations (5% granularity).
 Weight fit: χ² = 1.58, df = 2, p = 0.454 — good
 Model fit (55%/30%/15%): χ² = 0.73, p = 0.693 — excellent
 
-#### Alamo Sea — ★★ (6 fish, 111 observed)
+#### Alamo Sea — xx (6 fish, 111 observed)
 
 | Fish             | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |------------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -84,7 +84,7 @@ Model fit (55%/30%/15%): χ² = 0.73, p = 0.693 — excellent
 Weight fit: χ² = 1.23, df = 5, p = 0.942 — excellent
 Model fit (25%/20%/20%/15%/10%/10%): χ² = 2.38, p = 0.795 — excellent
 
-#### Alamo Sea — ★ (7 fish, 275 observed)
+#### Alamo Sea — x (7 fish, 275 observed)
 
 | Fish      | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |-----------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -99,7 +99,7 @@ Model fit (25%/20%/20%/15%/10%/10%): χ² = 2.38, p = 0.795 — excellent
 Weight fit: χ² = 0.36, df = 6, p = 0.999 — excellent
 Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 1.36, p = 0.968 — excellent
 
-#### Dam — ★★★ (3 fish, 34 observed)
+#### Dam — xxx (3 fish, 34 observed)
 
 | Fish          | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |---------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -110,7 +110,7 @@ Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 1.36, p = 0.968 — excellent
 Weight fit: χ² = 0.53, df = 2, p = 0.767 — excellent
 Model fit (55%/30%/15%): χ² = 0.87, p = 0.648 — excellent
 
-#### Dam — ★★ (6 fish, 94 observed)
+#### Dam — xx (6 fish, 94 observed)
 
 | Fish            | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |-----------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -124,7 +124,7 @@ Model fit (55%/30%/15%): χ² = 0.87, p = 0.648 — excellent
 Weight fit: χ² = 1.92, df = 5, p = 0.861 — excellent
 Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.19, p = 0.946 — excellent
 
-#### Dam — ★ (8 fish, 207 observed)
+#### Dam — x (8 fish, 207 observed)
 
 | Fish             | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |------------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -140,7 +140,7 @@ Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.19, p = 0.946 — excellent
 Weight fit: χ² = 2.80, df = 7, p = 0.903 — excellent
 Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 4.88, p = 0.674 — excellent
 
-#### Roxwood — ★★★ (3 fish, 23 observed)
+#### Roxwood — xxx (3 fish, 23 observed)
 
 | Fish          | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |---------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -151,7 +151,7 @@ Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 4.88, p = 0.674 — excellent
 Weight fit: χ² = 0.00, df = 2, p = 0.999 — excellent
 Model fit (55%/30%/15%): χ² = 2.22, p = 0.330 — good
 
-#### Roxwood — ★★ (6 fish, 79 observed)
+#### Roxwood — xx (6 fish, 79 observed)
 
 | Fish         | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |--------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
@@ -165,7 +165,7 @@ Model fit (55%/30%/15%): χ² = 2.22, p = 0.330 — good
 Weight fit: χ² = 2.34, df = 5, p = 0.801 — excellent
 Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.05, p = 0.958 — excellent
 
-#### Roxwood — ★ (7 fish, 152 observed)
+#### Roxwood — x (7 fish, 152 observed)
 
 | Fish               | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |--------------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|

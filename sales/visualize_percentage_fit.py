@@ -100,7 +100,7 @@ def format_percentages(percentages: tuple[int, ...]) -> str:
 
 def main() -> None:
     tier_data = collect_tier_data()
-    star_labels = {3: "★★★", 2: "★★", 1: "★"}
+    star_labels = {3: "xxx", 2: "xx", 1: "x"}
     step_sizes = [10, 5]
     step_labels = {10: "10% step", 5: "5% step"}
     step_colors = {10: "#e74c3c", 5: "#3498db"}

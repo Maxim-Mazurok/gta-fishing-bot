@@ -187,7 +187,7 @@ def plot_tier_landscape(
             arrowprops={"arrowstyle": "->", "color": "gray", "lw": 0.5},
         )
 
-    star_label = "★" * stars
+    star_label = "x" * stars
     tier_total = sum(observed_counts)
     axis.set_title(
         f"{region_name} — {star_label}"

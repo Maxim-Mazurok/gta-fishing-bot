@@ -29,6 +29,8 @@ class InventoryHandler:
 
     def __init__(self):
         self._last_action_time = 0.0
+        self._cached_slot = None        # (x, y) image-relative coords
+        self._cached_window_size = None  # (width, height) when slot was detected
 
     def _is_on_cooldown(self):
         return (time.perf_counter() - self._last_action_time) < INVENTORY_ACTION_COOLDOWN
@@ -69,10 +71,17 @@ class InventoryHandler:
         if not self._detect_inventory_text(img):
             return False
 
-        # --- Step 2: Find the grid slot (configured via INVENTORY_ROW/INVENTORY_COL env vars) ---
-        slot_center = self._find_grid_slot(img, row=INVENTORY_ROW, col=INVENTORY_COL)
-        if slot_center is None:
-            return False
+        # --- Step 2: Find the grid slot (use cache if window size unchanged) ---
+        current_size = (region['width'], region['height'])
+        if self._cached_slot is not None and self._cached_window_size == current_size:
+            slot_center = self._cached_slot
+        else:
+            slot_center = self._find_grid_slot(img, row=INVENTORY_ROW, col=INVENTORY_COL)
+            if slot_center is None:
+                return False
+            self._cached_slot = slot_center
+            self._cached_window_size = current_size
+            print(f"[INV] Cached grid slot at {slot_center} for window size {current_size}")
 
         # Convert to absolute screen coordinates
         abs_x = region['left'] + slot_center[0]

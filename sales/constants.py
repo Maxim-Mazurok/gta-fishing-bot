@@ -193,7 +193,7 @@ LOCATION_ORDER = list(REGIONS.values())
 # Fish are assigned in descending order of observed frequency.
 # Locations with fewer fish than the template use the first N entries.
 TIER_DROP_PERCENTAGES: dict[int, tuple[int, ...]] = {
-    3: (55, 30, 15),                     # ★★★: 3 fish
-    2: (25, 20, 20, 15, 10, 10),         # ★★:  6 fish
-    1: (20, 15, 15, 15, 10, 10, 10, 5),  # ★:   7-8 fish
+    3: (55, 30, 15),                     # xxx: 3 fish
+    2: (25, 20, 20, 15, 10, 10),         # xx:  6 fish
+    1: (20, 15, 15, 15, 10, 10, 10, 5),  # x:   7-8 fish
 }

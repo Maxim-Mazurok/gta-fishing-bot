@@ -1036,7 +1036,7 @@ def main() -> None:
 
 ## Pricing Tiers
 
-| Location     | ★      | ★★     | ★★★    |
+| Location     | x      | xx     | xxx    |
 |--------------|-------:|-------:|-------:|"""
     for location, tiers in TIER_PRICES.items():
         prices_header += f"\n| {location:<12} | ${tiers[1]:,} | ${tiers[2]:,} | ${tiers[3]:,} |"

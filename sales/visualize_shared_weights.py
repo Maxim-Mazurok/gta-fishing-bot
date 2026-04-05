@@ -161,7 +161,7 @@ def try_shared_weights(
 def main() -> None:
     tier_data = collect_tier_data()
 
-    star_labels = {3: "★★★", 2: "★★", 1: "★"}
+    star_labels = {3: "xxx", 2: "xx", 1: "x"}
 
     figure = plt.figure(figsize=(18, 14))
     outer_grid = gridspec.GridSpec(3, 1, figure=figure, hspace=0.4)
