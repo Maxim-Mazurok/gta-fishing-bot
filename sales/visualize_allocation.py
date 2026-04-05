@@ -997,7 +997,7 @@ def figure_7_individual_components(
 def main() -> None:
     region_data = _load_region_data()
     locations = [
-        name for name in ["Alamo Sea", "Land Act Dam", "Roxwood"]
+        name for name in ["Alamo Sea", "Dam", "Roxwood"]
         if name in region_data
     ]
     if len(locations) < 3:
