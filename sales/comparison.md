@@ -8,7 +8,7 @@ Bite wait by location: Alamo Sea 90s, Dam 90s, Roxwood 100s. Reel-in by location
 
 | Location  | Fish Caught | $/Fish observed | $/Fish model | Available Bundles                                     | $/Fish (bundles) | $/Fish total (obs) | $/Fish total (model) | $/Hour (model) |
 |-----------|------------:|----------------:|-------------:|-------------------------------------------------------|-----------------:|-------------------:|---------------------:|---------------:|
-| Alamo Sea |         463 |          $1,477 |       $1,411 | Gold Multizone #1, Alamo Starter, Low Level Multizone |             $678 |             $2,155 |           **$2,089** |        $66,561 |
+| Alamo Sea |         499 |          $1,480 |       $1,417 | Gold Multizone #1, Alamo Starter, Low Level Multizone |             $657 |             $2,137 |           **$2,074** |        $66,068 |
 | Dam       |         335 |          $1,664 |       $1,664 | Gold Multizone #1, Low Level Multizone                |             $369 |             $2,033 |           **$2,033** |        $62,556 |
 | Roxwood   |         256 |          $1,795 |       $1,859 | Gold Multizone #1, Low Level Multizone                |             $257 |             $2,052 |           **$2,116** |        $54,021 |
 
@@ -18,13 +18,13 @@ Optimal time split across locations to maximize total $/hour (considering both s
 
 | Location     | Time % (obs) | $/Fish (obs) | $/Hour (obs) | Time % (model) | $/Fish (model) | $/Hour (model) |
 |--------------|-------------:|-------------:|-------------:|---------------:|---------------:|---------------:|
-| Alamo Sea    |          54% |       $1,477 |      $54,610 |            50% |         $1,411 |        $52,524 |
-| Dam          |          21% |       $1,664 |      $51,206 |            23% |         $1,664 |        $51,206 |
-| Roxwood      |          25% |       $1,795 |      $45,823 |            27% |         $1,859 |        $47,455 |
-| **Combined** |         100% |              |  **$56,564** |           100% |                |    **$55,860** |
+| Alamo Sea    |          56% |       $1,480 |      $54,823 |            50% |         $1,417 |        $52,810 |
+| Dam          |          20% |       $1,664 |      $51,206 |            23% |         $1,664 |        $51,206 |
+| Roxwood      |          24% |       $1,795 |      $45,823 |            27% |         $1,859 |        $47,455 |
+| **Combined** |         100% |              |  **$56,592** |           100% |                |    **$55,877** |
 
-**Observed:** splitting yields **$56,564**/hour vs **$54,610**/hour best solo (+$1,954/hour, +3.6%).
-**Model:** splitting yields **$55,860**/hour vs **$52,524**/hour best solo (+$3,336/hour, +6.4%).
+**Observed:** splitting yields **$56,592**/hour vs **$54,823**/hour best solo (+$1,769/hour, +3.2%).
+**Model:** splitting yields **$55,877**/hour vs **$52,810**/hour best solo (+$3,066/hour, +5.8%).
 
 ## Bundle Details
 
@@ -32,14 +32,14 @@ Optimal time split across locations to maximize total $/hour (considering both s
 
 | Bundle        | Fish                                     |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                               |
 |---------------|------------------------------------------|--------:|---------------------:|---------:|-----------:|-------------------------------------------------------------------------------------------|
-| Alamo Starter | Morwhong, Southern Tuna, Silver Trevally | $10,000 |                   53 |   99 min |       $190 | Morwhong: 28/463 (6.0%) \| Southern Tuna: 11/463 (2.4%) \| Silver Trevally: 21/463 (4.5%) |
+| Alamo Starter | Morwhong, Southern Tuna, Silver Trevally | $10,000 |                   53 |   99 min |       $190 | Morwhong: 28/499 (5.6%) \| Southern Tuna: 12/499 (2.4%) \| Silver Trevally: 23/499 (4.6%) |
 
 ### Cross-Location
 
 | Bundle              | Fish                             |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                                                 |
 |---------------------|----------------------------------|--------:|---------------------:|---------:|-----------:|-------------------------------------------------------------------------------------------------------------|
-| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  178 |  357 min |        $72 | Bluefin Tuna @ Alamo Sea: 4/463 (0.9%) \| Musky @ Dam: 17/335 (5.1%) \| Dolphinfish @ Roxwood: 6/256 (2.3%) |
-| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   56 |  118 min |       $195 | Scollop @ Alamo Sea: 51/463 (11.0%) \| Carp @ Dam: 14/335 (4.2%) \| Grenadier @ Roxwood: 11/256 (4.3%)      |
+| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  187 |  374 min |        $68 | Bluefin Tuna @ Alamo Sea: 4/499 (0.8%) \| Musky @ Dam: 17/335 (5.1%) \| Dolphinfish @ Roxwood: 6/256 (2.3%) |
+| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   57 |  119 min |       $194 | Scollop @ Alamo Sea: 52/499 (10.4%) \| Carp @ Dam: 14/335 (4.2%) \| Grenadier @ Roxwood: 11/256 (4.3%)      |
 
 ## Drop Rate Analysis
 
@@ -50,54 +50,54 @@ Tier drop rates are consistent across locations, suggesting a fixed game mechani
 | Tier        | Alamo Sea |   Dam | Roxwood | Average |
 |-------------|----------:|------:|--------:|--------:|
 | xxxx purple |      0.2% |  0.0% |    0.4% |    0.2% |
-| xxx         |      7.1% | 10.1% |    9.0% |    8.8% |
-| xx          |     26.3% | 28.1% |   24.6% |   26.3% |
-| x           |     65.0% | 61.8% |   65.6% |   64.1% |
+| xxx         |      7.2% | 10.1% |    9.0% |    8.8% |
+| xx          |     27.5% | 28.1% |   24.6% |   26.7% |
+| x           |     63.9% | 61.8% |   65.6% |   63.8% |
 
 ### Within-Tier Weights
 
 Observed frequencies vs model (percentage template) per fish.
 Model uses shared percentage templates across all locations (5% granularity).
 
-#### Alamo Sea — xxx (3 fish, 33 observed)
+#### Alamo Sea — xxx (3 fish, 36 observed)
 
 | Fish            | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |-----------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Silver Trevally |    21 |      63.6% |     10 |    62.5% |     55% |          55.0% |     +2.9 |
-| Great Barracuda |     8 |      24.2% |      3 |    18.8% |     30% |          30.0% |     -1.9 |
-| Bluefin Tuna    |     4 |      12.1% |      3 |    18.8% |     15% |          15.0% |     -1.0 |
+| Silver Trevally |    23 |      63.9% |     10 |    62.5% |     55% |          55.0% |     +3.2 |
+| Great Barracuda |     9 |      25.0% |      3 |    18.8% |     30% |          30.0% |     -1.8 |
+| Bluefin Tuna    |     4 |      11.1% |      3 |    18.8% |     15% |          15.0% |     -1.4 |
 
-Weight fit: χ² = 1.31, df = 2, p = 0.519 — excellent
-Model fit (55%/30%/15%): χ² = 0.99, p = 0.608 — excellent
+Weight fit: χ² = 1.88, df = 2, p = 0.390 — good
+Model fit (55%/30%/15%): χ² = 1.18, p = 0.554 — excellent
 
-#### Alamo Sea — xx (6 fish, 122 observed)
+#### Alamo Sea — xx (6 fish, 137 observed)
 
 | Fish             | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |------------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Southern Garfish |    32 |      26.2% |      9 |    23.1% |     25% |          25.0% |     +1.5 |
-| Trout            |    26 |      21.3% |      9 |    23.1% |     20% |          20.0% |     +1.6 |
-| Blue Warehou     |    25 |      20.5% |      9 |    23.1% |     20% |          20.0% |     +0.6 |
-| Golden Perch     |    15 |      12.3% |      4 |    10.3% |     15% |          15.0% |     -3.3 |
-| Snow Crab        |    13 |      10.7% |      4 |    10.3% |     10% |          10.0% |     +0.8 |
-| Southern Tuna    |    11 |       9.0% |      4 |    10.3% |     10% |          10.0% |     -1.2 |
+| Southern Garfish |    35 |      25.5% |      2 |    22.2% |     25% |          25.0% |     +0.8 |
+| Trout            |    30 |      21.9% |      2 |    22.2% |     20% |          20.0% |     +2.6 |
+| Blue Warehou     |    27 |      19.7% |      2 |    22.2% |     20% |          20.0% |     -0.4 |
+| Snow Crab        |    17 |      12.4% |      1 |    11.1% |     15% |          15.0% |     -3.6 |
+| Golden Perch     |    16 |      11.7% |      1 |    11.1% |     10% |          10.0% |     +2.3 |
+| Southern Tuna    |    12 |       8.8% |      1 |    11.1% |     10% |          10.0% |     -1.7 |
 
-Weight fit: χ² = 1.74, df = 5, p = 0.884 — excellent
-Model fit (25%/20%/20%/15%/10%/10%): χ² = 0.96, p = 0.966 — excellent
+Weight fit: χ² = 2.01, df = 5, p = 0.848 — excellent
+Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.48, p = 0.915 — excellent
 
-#### Alamo Sea — x (7 fish, 301 observed)
+#### Alamo Sea — x (7 fish, 319 observed)
 
 | Fish      | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |-----------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Albacore  |    69 |      22.9% |      7 |    22.6% |     20% |          21.1% |     +5.6 |
-| Scollop   |    51 |      16.9% |      5 |    16.1% |     15% |          15.8% |     +3.5 |
-| Halibut   |    47 |      15.6% |      5 |    16.1% |     15% |          15.8% |     -0.5 |
-| Broadbill |    47 |      15.6% |      5 |    16.1% |     15% |          15.8% |     -0.5 |
-| Redfish   |    31 |      10.3% |      3 |     9.7% |     10% |          10.5% |     -0.7 |
-| Morwhong  |    28 |       9.3% |      3 |     9.7% |     10% |          10.5% |     -3.7 |
-| Flathead  |    28 |       9.3% |      3 |     9.7% |     10% |          10.5% |     -3.7 |
+| Albacore  |    76 |      23.8% |     10 |    23.3% |     20% |          21.1% |     +8.8 |
+| Scollop   |    52 |      16.3% |      7 |    16.3% |     15% |          15.8% |     +1.6 |
+| Halibut   |    51 |      16.0% |      7 |    16.3% |     15% |          15.8% |     +0.6 |
+| Broadbill |    49 |      15.4% |      7 |    16.3% |     15% |          15.8% |     -1.4 |
+| Redfish   |    35 |      11.0% |      4 |     9.3% |     10% |          10.5% |     +1.4 |
+| Morwhong  |    28 |       8.8% |      4 |     9.3% |     10% |          10.5% |     -5.6 |
+| Flathead  |    28 |       8.8% |      4 |     9.3% |     10% |          10.5% |     -5.6 |
 
-Weight fit: χ² = 0.45, df = 6, p = 0.998 — excellent
-Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 1.64, p = 0.950 — excellent
+Weight fit: χ² = 1.37, df = 6, p = 0.968 — excellent
+Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 3.18, p = 0.786 — excellent
 
 #### Dam — xxx (3 fish, 34 observed)
 

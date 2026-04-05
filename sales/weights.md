@@ -9,7 +9,7 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 
 | # | Location | $/g (sale) | $/g (w/ bundles) | Avg Weight | Avg $/fish | Bundle $/fish | g/hour | $/hour (sale) | $/hour (total) | Fish | Coverage |
 |--:|----------|----------:|----------------:|-----------:|-----------:|--------------:|-------:|--------------:|---------------:|-----:|---------:|
-| 1 | Alamo Sea | 4.41 | **6.44** | 335g | $1,477 | $678 | 10,668 | $47,065 | $68,670 | 463 | 98% |
+| 1 | Alamo Sea | 4.41 | **6.36** | 336g | $1,481 | $657 | 10,704 | $47,185 | $68,105 | 499 | 99% |
 | 2 | Roxwood | 5.34 | **6.11** | 331g | $1,769 | $257 | 8,464 | $45,178 | $51,744 | 256 | 99% |
 | 3 | Dam | 4.85 | **5.92** | 343g | $1,664 | $369 | 10,563 | $51,206 | $62,556 | 335 | 100% |
 
@@ -17,22 +17,22 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 
 | Fish | $/fish | Weight | $/g | Drop % | Stars | Known |
 |------|-------:|-------:|----:|-------:|-------|-------|
-| Silver Trevally | $2,000 | 400g | 5.00 | 4.5% | xxx | est. |
-| Great Barracuda | $2,000 | 400g | 5.00 | 1.7% | xxx | est. |
-| Albacore | $1,350 | 300g | 4.50 | 14.9% | x | est. |
-| Scollop | $1,350 | 300g | 4.50 | 11.0% | x | est. |
+| Silver Trevally | $2,000 | 400g | 5.00 | 4.6% | xxx | est. |
+| Great Barracuda | $2,000 | 400g | 5.00 | 1.8% | xxx | est. |
+| Albacore | $1,350 | 300g | 4.50 | 15.2% | x | est. |
+| Scollop | $1,350 | 300g | 4.50 | 10.4% | x | est. |
 | Halibut | $1,350 | 300g | 4.50 | 10.2% | x | est. |
-| Broadbill | $1,350 | 300g | 4.50 | 10.2% | x | est. |
-| Redfish | $1,350 | 300g | 4.50 | 6.7% | x | est. |
-| Morwhong | $1,350 | 300g | 4.50 | 6.0% | x | est. |
-| Flathead | $1,350 | 300g | 4.50 | 6.0% | x | est. |
-| Southern Garfish | $1,650 | 400g | 4.12 | 6.9% | xx | est. |
-| Trout | $1,650 | 400g | 4.12 | 5.6% | xx | est. |
+| Broadbill | $1,350 | 300g | 4.50 | 9.8% | x | est. |
+| Redfish | $1,350 | 300g | 4.50 | 7.0% | x | est. |
+| Morwhong | $1,350 | 300g | 4.50 | 5.6% | x | est. |
+| Flathead | $1,350 | 300g | 4.50 | 5.6% | x | est. |
+| Southern Garfish | $1,650 | 400g | 4.12 | 7.0% | xx | est. |
+| Trout | $1,650 | 400g | 4.12 | 6.0% | xx | est. |
 | Blue Warehou | $1,650 | 400g | 4.12 | 5.4% | xx | est. |
+| Snow Crab | $1,650 | 400g | 4.12 | 3.4% | xx | est. |
 | Golden Perch | $1,650 | 400g | 4.12 | 3.2% | xx | est. |
-| Snow Crab | $1,650 | 400g | 4.12 | 2.8% | xx | est. |
 | Southern Tuna | $1,650 | 400g | 4.12 | 2.4% | xx | est. |
-| Bluefin Tuna | $2,000 | 500g | 4.00 | 0.9% | xxx | yes |
+| Bluefin Tuna | $2,000 | 500g | 4.00 | 0.8% | xxx | yes |
 
 ### Roxwood — Fish by $/gram
 
