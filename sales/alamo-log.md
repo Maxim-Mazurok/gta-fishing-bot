@@ -90,3 +90,20 @@ Patch Kit	1
 Silver Trevally	4
 Morwhong	5
 Southern Tuna   3
+--sold6
+Broadbill	5
+Morwhong	1
+Scollop	4
+Silver Trevally	4
+Great Barracuda	1
+Southern Tuna	2
+Albacore	6
+Trout	1
+Redfish	5
+Snow Crab	2
+Bluefin Tuna	1
+Blue Warehou	1
+Halibut	4
+Southern Garfish	2
+Golden Perch	3
+Flathead	1
