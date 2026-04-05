@@ -6,6 +6,7 @@ The other visualize_* scripts generate experimental analysis PNGs.
 
 from update_sales import main as update_sales
 from update_time import main as update_time
+from value_per_gram import main as update_weights
 from visualize_percentage_fit import main as visualize_percentage_fit
 from visualize_shared_weights import main as visualize_shared_weights
 from visualize_weights import main as visualize_weights
@@ -17,6 +18,9 @@ def main() -> None:
 
     print("Updating time stats...")
     update_time()
+
+    print("Updating fish value-per-gram analysis...")
+    update_weights()
 
     print("Generating percentage fit visualization...")
     visualize_percentage_fit()

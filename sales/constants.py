@@ -119,8 +119,8 @@ PRICES: dict[str, tuple[int, int, str]] = {
     "Baby Pufferfish": (10_000, 4, "purple"),
     "Bluehead Wrasse": (2150, 1, "green"),
     "Carp": (1850, 2, ""),
-    "Amberjack": (2150, 2, ""),
-    "Barramundi": (1650, 1, ""),
+    "Barramundi": (2150, 2, ""),
+    "Amberjack": (1650, 1, ""),
     "Hogfish": (2500, 2, "green"),
     "Catfish": (2000, 1, ""),
     "Brook Trout": (1500, 1, ""),
@@ -146,6 +146,36 @@ TIER_PRICES = {
     "Ocean":        {1: 1850, 2: 2150, 3: 2500},
     "Cave":         {1: 2000, 2: 2350, 3: 2650},
     "Humane Labs":  {1: 2150, 2: 2500, 3: 2850},
+}
+
+# Fish weight in grams (per fish), extracted from selling-screen screenshots.
+# Run `python weights/extract_weights.py` to add new fish from new screenshots.
+FISH_WEIGHTS: dict[str, int] = {
+    "Amberjack": 300,
+    "Atlantic Salmon": 400,
+    "Australian Herring": 300,
+    "Banded Butterflyfish": 300,
+    "Black Bream": 300,
+    "Bluefin Tuna": 500,
+    "Brook Trout": 300,
+    "Cod": 300,
+    "Dolphinfish": 300,
+    "Dungeness Crab": 300,
+    "Escolar": 300,
+    "Grouper": 300,
+    "Gummy Shark": 400,
+    "Murray Cod": 300,
+    "Musky": 500,
+    "Ocean Jacket": 300,
+    "Ocean Perch": 300,
+    "Red Snapper": 400,
+    "Sand Whiting": 300,
+    "Sandy Sprat": 300,
+    "Silver Perch": 400,
+    "Snapper": 400,
+    "Trevella": 400,
+    "Triggerfish": 300,
+    "Trumpetfish": 400,
 }
 
 # Manual notes for special fish sightings (weather, etc.)

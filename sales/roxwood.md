@@ -10,7 +10,6 @@
 | Dolphinfish        |       6 |     2.3% | xxx         | Gold Multizone #1   |
 | Snapper            |      19 |     7.4% | xx          |                     |
 | Silver Perch       |      16 |     6.2% | xx          |                     |
-| Amberjack          |      16 |     6.2% | xx          |                     |
 | Gummy Shark        |      12 |     4.7% | xx          |                     |
 | Brown Trout        |      10 |     3.9% | xx          |                     |
 | Red Snapper        |       6 |     2.3% | xx          | Silver Multizone #2 |
@@ -19,6 +18,7 @@
 | Ocean Perch        |      25 |     9.8% | x           | Bronze Multizone #1 |
 | Sandy Sprat        |      23 |     9.0% | x           |                     |
 | Australian Herring |      17 |     6.6% | x           |                     |
+| Amberjack          |      16 |     6.2% | x           |                     |
 | Ocean Jacket       |       9 |     3.5% | x           |                     |
 | Sand Whiting       |       6 |     2.3% | x           |                     |
 | Esky               |       1 |     0.4% | ?           |                     |

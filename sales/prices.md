@@ -114,8 +114,8 @@ Heavy storm weather may increase chances.
 | Baby Pufferfish      | $10,000 | xxxx purple | Special     |
 | Bluehead Wrasse      |  $2,150 | x green     | Humane Labs |
 | Carp                 |  $1,850 | xx          | Dam         |
-| Amberjack            |  $2,150 | xx          | Ocean       |
-| Barramundi           |  $1,650 | x           | Roxwood     |
+| Barramundi           |  $2,150 | xx          | Ocean       |
+| Amberjack            |  $1,650 | x           | Roxwood     |
 | Hogfish              |  $2,500 | xx green    | Humane Labs |
 | Catfish              |  $2,000 | x           | Cave        |
 | Brook Trout          |  $1,500 | x           | Dam         |

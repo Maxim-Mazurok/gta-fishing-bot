@@ -10,21 +10,21 @@ Bite wait by location: Alamo Sea 90s, Dam 90s, Roxwood 100s. Reel-in by location
 |-----------|------------:|----------------:|-------------:|-------------------------------------------------------|-----------------:|-------------------:|---------------------:|---------------:|
 | Alamo Sea |         463 |          $1,477 |       $1,411 | Gold Multizone #1, Alamo Starter, Low Level Multizone |             $678 |             $2,155 |           **$2,089** |        $66,561 |
 | Dam       |         335 |          $1,664 |       $1,664 | Gold Multizone #1, Low Level Multizone                |             $369 |             $2,033 |           **$2,033** |        $62,556 |
-| Roxwood   |         256 |          $1,826 |       $1,849 | Gold Multizone #1, Low Level Multizone                |             $257 |             $2,083 |           **$2,107** |        $53,784 |
+| Roxwood   |         256 |          $1,795 |       $1,859 | Gold Multizone #1, Low Level Multizone                |             $257 |             $2,052 |           **$2,116** |        $54,021 |
 
 ## Optimal Allocation
 
 Optimal time split across locations to maximize total $/hour (considering both sale value and cross-location bundle completions):
 
-| Location     | Time % (obs) | $/Fish (obs) | $/Hour (obs) | Time % (model) | $/Fish (model) | $/Hour (model) |6
+| Location     | Time % (obs) | $/Fish (obs) | $/Hour (obs) | Time % (model) | $/Fish (model) | $/Hour (model) |
 |--------------|-------------:|-------------:|-------------:|---------------:|---------------:|---------------:|
 | Alamo Sea    |          54% |       $1,477 |      $54,610 |            50% |         $1,411 |        $52,524 |
 | Dam          |          21% |       $1,664 |      $51,206 |            23% |         $1,664 |        $51,206 |
-| Roxwood      |          25% |       $1,826 |      $46,621 |            27% |         $1,849 |        $47,218 |
-| **Combined** |         100% |              |  **$56,763** |           100% |                |    **$55,796** |
+| Roxwood      |          25% |       $1,795 |      $45,823 |            27% |         $1,859 |        $47,455 |
+| **Combined** |         100% |              |  **$56,564** |           100% |                |    **$55,860** |
 
-**Observed:** splitting yields **$56,763**/hour vs **$54,610**/hour best solo (+$2,153/hour, +3.9%).
-**Model:** splitting yields **$55,796**/hour vs **$52,524**/hour best solo (+$3,272/hour, +6.2%).
+**Observed:** splitting yields **$56,564**/hour vs **$54,610**/hour best solo (+$1,954/hour, +3.6%).
+**Model:** splitting yields **$55,860**/hour vs **$52,524**/hour best solo (+$3,336/hour, +6.4%).
 
 ## Bundle Details
 
@@ -51,8 +51,8 @@ Tier drop rates are consistent across locations, suggesting a fixed game mechani
 |-------------|----------:|------:|--------:|--------:|
 | xxxx purple |      0.2% |  0.0% |    0.4% |    0.2% |
 | xxx         |      7.1% | 10.1% |    9.0% |    8.8% |
-| xx          |     26.3% | 28.1% |   30.9% |   28.4% |
-| x           |     65.0% | 61.8% |   59.4% |   62.1% |
+| xx          |     26.3% | 28.1% |   24.6% |   26.3% |
+| x           |     65.0% | 61.8% |   65.6% |   64.1% |
 
 ### Within-Tier Weights
 
@@ -151,31 +151,31 @@ Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 4.88, p = 0.674 — excellent
 Weight fit: χ² = 0.00, df = 2, p = 0.999 — excellent
 Model fit (55%/30%/15%): χ² = 2.22, p = 0.330 — good
 
-#### Roxwood — xx (6 fish, 79 observed)
+#### Roxwood — xx (5 fish, 63 observed)
 
 | Fish         | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |--------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Snapper      |    19 |      24.1% |      7 |    21.2% |     25% |          25.0% |     -0.8 |
-| Silver Perch |    16 |      20.3% |      7 |    21.2% |     20% |          20.0% |     +0.2 |
-| Amberjack    |    16 |      20.3% |      7 |    21.2% |     20% |          20.0% |     +0.2 |
-| Gummy Shark  |    12 |      15.2% |      4 |    12.1% |     15% |          15.0% |     +0.2 |
-| Brown Trout  |    10 |      12.7% |      4 |    12.1% |     10% |          10.0% |     +2.1 |
-| Red Snapper  |     6 |       7.6% |      4 |    12.1% |     10% |          10.0% |     -1.9 |
+| Snapper      |    19 |      30.2% |      9 |    27.3% |     25% |          27.8% |     +1.5 |
+| Silver Perch |    16 |      25.4% |      9 |    27.3% |     20% |          22.2% |     +2.0 |
+| Gummy Shark  |    12 |      19.0% |      5 |    15.2% |     20% |          22.2% |     -2.0 |
+| Brown Trout  |    10 |      15.9% |      5 |    15.2% |     15% |          16.7% |     -0.5 |
+| Red Snapper  |     6 |       9.5% |      5 |    15.2% |     10% |          11.1% |     -1.0 |
 
-Weight fit: χ² = 2.34, df = 5, p = 0.801 — excellent
-Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.05, p = 0.958 — excellent
+Weight fit: χ² = 2.24, df = 4, p = 0.691 — excellent
+Model fit (25%/20%/20%/15%/10%/10%): χ² = 0.87, p = 0.929 — excellent
 
-#### Roxwood — x (7 fish, 152 observed)
+#### Roxwood — x (8 fish, 168 observed)
 
 | Fish               | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |--------------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Grouper            |    45 |      29.6% |      6 |    30.0% |     20% |          21.1% |    +13.0 |
-| Dungeness Crab     |    27 |      17.8% |      3 |    15.0% |     15% |          15.8% |     +3.0 |
-| Ocean Perch        |    25 |      16.4% |      3 |    15.0% |     15% |          15.8% |     +1.0 |
-| Sandy Sprat        |    23 |      15.1% |      3 |    15.0% |     15% |          15.8% |     -1.0 |
-| Australian Herring |    17 |      11.2% |      3 |    15.0% |     10% |          10.5% |     +1.0 |
-| Ocean Jacket       |     9 |       5.9% |      1 |     5.0% |     10% |          10.5% |     -7.0 |
-| Sand Whiting       |     6 |       3.9% |      1 |     5.0% |     10% |          10.5% |    -10.0 |
+| Grouper            |    45 |      26.8% |      5 |    25.0% |     20% |          20.0% |    +11.4 |
+| Dungeness Crab     |    27 |      16.1% |      3 |    15.0% |     15% |          15.0% |     +1.8 |
+| Ocean Perch        |    25 |      14.9% |      3 |    15.0% |     15% |          15.0% |     -0.2 |
+| Sandy Sprat        |    23 |      13.7% |      3 |    15.0% |     15% |          15.0% |     -2.2 |
+| Australian Herring |    17 |      10.1% |      2 |    10.0% |     10% |          10.0% |     +0.2 |
+| Amberjack          |    16 |       9.5% |      2 |    10.0% |     10% |          10.0% |     -0.8 |
+| Ocean Jacket       |     9 |       5.4% |      1 |     5.0% |     10% |          10.0% |     -7.8 |
+| Sand Whiting       |     6 |       3.6% |      1 |     5.0% |      5% |           5.0% |     -2.4 |
 
-Weight fit: χ² = 3.07, df = 6, p = 0.801 — excellent
-Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 15.11, p = 0.019 — poor
+Weight fit: χ² = 1.31, df = 7, p = 0.988 — excellent
+Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 8.54, p = 0.288 — good
