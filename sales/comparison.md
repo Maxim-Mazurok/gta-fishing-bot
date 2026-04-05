@@ -2,15 +2,15 @@
 
 Detected tier: 3 (Alamo Sea, Land Act Dam, Roxwood).
 
-Bite wait by location: Alamo Sea 80s, Land Act Dam 90s, Roxwood 100s. Reel-in: 15s.
+Bite wait by location: Alamo Sea 80s, Land Act Dam 90s, Roxwood 100s. Reel-in by location: Alamo Sea 15s, Land Act Dam 22s, Roxwood 30s.
 
 ~ = estimated (not yet observed in catch data)
 
 | Location     | Fish Caught | $/Fish observed | $/Fish model | Available Bundles                                     | $/Fish (bundles) | $/Fish total (obs) | $/Fish total (model) | $/Hour (model) |
 |--------------|------------:|----------------:|-------------:|-------------------------------------------------------|-----------------:|-------------------:|---------------------:|---------------:|
 | Alamo Sea    |         420 |          $1,472 |       $1,404 | Gold Multizone #1, Alamo Starter, Low Level Multizone |             $655 |             $2,127 |           **$2,059** |        $78,038 |
-| Land Act Dam |         203 |          $1,670 |       $1,670 | Gold Multizone #1, Low Level Multizone                |             $393 |             $2,063 |           **$2,063** |        $70,733 |
-| Roxwood      |         172 |          $1,804 |       $1,871 | Gold Multizone #1, Low Level Multizone                |             $205 |             $2,009 |           **$2,077** |        $65,005 |
+| Land Act Dam |         203 |          $1,670 |       $1,670 | Gold Multizone #1, Low Level Multizone                |             $393 |             $2,063 |           **$2,063** |        $66,312 |
+| Roxwood      |         172 |          $1,804 |       $1,871 | Gold Multizone #1, Low Level Multizone                |             $205 |             $2,009 |           **$2,077** |        $57,504 |
 
 ## Optimal Allocation
 
@@ -18,13 +18,13 @@ Optimal time split across locations to maximize total $/hour (considering both s
 
 | Location     | Time % (obs) | $/Fish (obs) | $/Hour (obs) | Time % (model) | $/Fish (model) | $/Hour (model) |
 |--------------|-------------:|-------------:|-------------:|---------------:|---------------:|---------------:|
-| Alamo Sea    |          63% |       $1,472 |      $63,916 |            60% |         $1,404 |        $61,339 |
-| Land Act Dam |          14% |       $1,670 |      $57,264 |            15% |         $1,670 |        $57,264 |
-| Roxwood      |          23% |       $1,804 |      $56,475 |            25% |         $1,871 |        $58,574 |
-| **Combined** |         100% |              |  **$65,710** |           100% |                |    **$64,610** |
+| Alamo Sea    |         100% |       $1,472 |      $63,916 |            61% |         $1,404 |        $61,339 |
+| Land Act Dam |           0% |       $1,670 |      $53,685 |            14% |         $1,670 |        $53,685 |
+| Roxwood      |           0% |       $1,804 |      $49,959 |            25% |         $1,871 |        $51,816 |
+| **Combined** |         100% |              |  **$63,916** |           100% |                |    **$62,134** |
 
-**Observed:** splitting yields **$65,710**/hour vs **$63,916**/hour best solo (+$1,795/hour, +2.8%).
-**Model:** splitting yields **$64,610**/hour vs **$61,339**/hour best solo (+$3,271/hour, +5.3%).
+**Observed:** splitting yields **$63,916**/hour vs **$63,916**/hour best solo (+$0/hour, +0.0%).
+**Model:** splitting yields **$62,134**/hour vs **$61,339**/hour best solo (+$795/hour, +1.3%).
 
 ## Bundle Details
 
@@ -38,8 +38,8 @@ Optimal time split across locations to maximize total $/hour (considering both s
 
 | Bundle              | Fish                             |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                                                          |
 |---------------------|----------------------------------|--------:|---------------------:|---------:|-----------:|----------------------------------------------------------------------------------------------------------------------|
-| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  201 |  336 min |        $63 | Bluefin Tuna @ Alamo Sea: 3/420 (0.7%) \| Musky @ Land Act Dam: 11/203 (5.4%) \| Dolphinfish @ Roxwood: 4/172 (2.3%) |
-| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   66 |  120 min |       $167 | Scollop @ Alamo Sea: 47/420 (11.2%) \| Carp @ Land Act Dam: 9/203 (4.4%) \| Grenadier @ Roxwood: 5/172 (2.9%)        |
+| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  201 |  349 min |        $63 | Bluefin Tuna @ Alamo Sea: 3/420 (0.7%) \| Musky @ Land Act Dam: 11/203 (5.4%) \| Dolphinfish @ Roxwood: 4/172 (2.3%) |
+| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   66 |  131 min |       $167 | Scollop @ Alamo Sea: 47/420 (11.2%) \| Carp @ Land Act Dam: 9/203 (4.4%) \| Grenadier @ Roxwood: 5/172 (2.9%)        |
 
 ## Drop Rate Analysis
 

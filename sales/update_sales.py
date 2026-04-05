@@ -12,6 +12,7 @@ from constants import (
     REGIONS,
     SALES_DIR,
     SECONDS_REELING_IN,
+    SECONDS_REELING_IN_DEFAULT,
     SECONDS_WAITING_FOR_BITE,
     SPECIAL_FISH_NOTES,
     TIER_DROP_PERCENTAGES,
@@ -1065,9 +1066,13 @@ def main() -> None:
             f"{loc} {SECONDS_WAITING_FOR_BITE[loc]}s"
             for loc in unlocked if loc in SECONDS_WAITING_FOR_BITE
         )
+        reel_details = ", ".join(
+            f"{loc} {SECONDS_REELING_IN.get(loc, SECONDS_REELING_IN_DEFAULT)}s"
+            for loc in unlocked
+        )
         time_note = (
             f"Bite wait by location: {bite_details}."
-            f" Reel-in: {SECONDS_REELING_IN}s."
+            f" Reel-in by location: {reel_details}."
         )
         estimated_note = "~ = estimated (not yet observed in catch data)"
         content = (

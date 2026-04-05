@@ -160,12 +160,19 @@ SECONDS_WAITING_FOR_BITE: dict[str, int] = {
     "Roxwood": 100,
 }
 SECONDS_WAITING_FOR_BITE_DEFAULT = 100  # for unknown locations
-SECONDS_REELING_IN = 15                 # improves with skill
+SECONDS_REELING_IN: dict[str, int] = {
+    "Alamo Sea": 15,
+    "Land Act Dam": 22,
+    "Roxwood": 30,
+}
+SECONDS_REELING_IN_DEFAULT = 30  # for unknown locations
 
 
 def seconds_per_fish(location: str) -> int:
     """Total seconds per fish at a given location."""
-    return SECONDS_WAITING_FOR_BITE.get(location, SECONDS_WAITING_FOR_BITE_DEFAULT) + SECONDS_REELING_IN
+    waiting = SECONDS_WAITING_FOR_BITE.get(location, SECONDS_WAITING_FOR_BITE_DEFAULT)
+    reeling = SECONDS_REELING_IN.get(location, SECONDS_REELING_IN_DEFAULT)
+    return waiting + reeling
 
 
 def fish_per_hour(location: str) -> float:
