@@ -1,16 +1,17 @@
-Sandy Sprat  11
-Grouper  14
-King Mackerel  4
-Australian Herring  4
-Snapper  5
-Gummy Shark  4
-Sand Whiting  4
-Ocean Jacket  3
-Grenadier  3
-Ocean Perch  3
-Dungeness Crab  8
-Silver Perch  3
-Amberjack  5
-Brown Trout  5
-Red Snapper  1
-Dolphinfish  1
+Sandy Sprat	15
+Grouper	35
+King Mackerel	6
+Australian Herring	9
+Snapper	15
+Gummy Shark	7
+Sand Whiting	6
+Ocean Jacket	6
+Grenadier	5
+Ocean Perch	13
+Dungeness Crab	17
+Silver Perch	12
+Amberjack	12
+Brown Trout	7
+Red Snapper	3
+Dolphinfish	4
+--sold (except Grenadier and Dolphinfish)

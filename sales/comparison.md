@@ -10,7 +10,7 @@ Assuming 100s wait for bite + 15s reel-in = 115s per fish (31.3 fish/hour).
 |--------------|------------:|----------------:|-------------:|-------------------------------------------------------|-----------------:|-------------------:|---------------------:|---------------:|
 | Alamo Sea    |         420 |          $1,472 |       $1,404 | Gold Multizone #1, Alamo Starter, Low Level Multizone |             $655 |             $2,127 |           **$2,059** |        $64,466 |
 | Land Act Dam |         203 |          $1,670 |       $1,670 | Gold Multizone #1, Low Level Multizone                |             $393 |             $2,063 |           **$2,063** |        $64,583 |
-| Roxwood      |          78 |          $1,785 |       $1,862 | Gold Multizone #1, Low Level Multizone                |             $196 |             $1,980 |           **$2,058** |        $64,418 |
+| Roxwood      |         172 |          $1,804 |       $1,871 | Gold Multizone #1, Low Level Multizone                |             $205 |             $2,009 |           **$2,077** |        $65,005 |
 
 ## Optimal Allocation
 
@@ -18,13 +18,13 @@ Optimal time split across locations to maximize total $/hour (considering both s
 
 | Location     | Time % (obs) | $/Fish (obs) | $/Hour (obs) | Time % (model) | $/Fish (model) | $/Hour (model) |
 |--------------|-------------:|-------------:|-------------:|---------------:|---------------:|---------------:|
-| Alamo Sea    |          16% |       $1,472 |      $52,800 |            16% |         $1,404 |        $50,671 |
-| Land Act Dam |          39% |       $1,670 |      $52,284 |            39% |         $1,670 |        $52,284 |
-| Roxwood      |          45% |       $1,785 |      $55,866 |            45% |         $1,862 |        $58,298 |
-| **Combined** |         100% |              |  **$60,389** |           100% |                |    **$61,143** |
+| Alamo Sea    |          14% |       $1,472 |      $52,800 |            14% |         $1,404 |        $50,671 |
+| Land Act Dam |          34% |       $1,670 |      $52,284 |            34% |         $1,670 |        $52,284 |
+| Roxwood      |          52% |       $1,804 |      $56,475 |            52% |         $1,871 |        $58,574 |
+| **Combined** |         100% |              |  **$60,126** |           100% |                |    **$60,919** |
 
-**Observed:** splitting yields **$60,389**/hour vs **$55,866**/hour best solo (+$4,523/hour, +8.1%).
-**Model:** splitting yields **$61,143**/hour vs **$58,298**/hour best solo (+$2,845/hour, +4.9%).
+**Observed:** splitting yields **$60,126**/hour vs **$56,475**/hour best solo (+$3,650/hour, +6.5%).
+**Model:** splitting yields **$60,919**/hour vs **$58,574**/hour best solo (+$2,345/hour, +4.0%).
 
 ## Bundle Details
 
@@ -36,10 +36,10 @@ Optimal time split across locations to maximize total $/hour (considering both s
 
 ### Cross-Location
 
-| Bundle              | Fish                             |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                                                         |
-|---------------------|----------------------------------|--------:|---------------------:|---------:|-----------:|---------------------------------------------------------------------------------------------------------------------|
-| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  236 |  453 min |        $54 | Bluefin Tuna @ Alamo Sea: 3/420 (0.7%) \| Musky @ Land Act Dam: 11/203 (5.4%) \| Dolphinfish @ Roxwood: 1/78 (1.3%) |
-| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   57 |  110 min |       $191 | Scollop @ Alamo Sea: 47/420 (11.2%) \| Carp @ Land Act Dam: 9/203 (4.4%) \| Grenadier @ Roxwood: 3/78 (3.8%)        |
+| Bundle              | Fish                             |   Bonus | Avg Fish to Complete | Avg Time | Bonus/Fish | Catch Rates                                                                                                          |
+|---------------------|----------------------------------|--------:|---------------------:|---------:|-----------:|----------------------------------------------------------------------------------------------------------------------|
+| Gold Multizone #1   | Bluefin Tuna, Musky, Dolphinfish | $12,750 |                  201 |  386 min |        $63 | Bluefin Tuna @ Alamo Sea: 3/420 (0.7%) \| Musky @ Land Act Dam: 11/203 (5.4%) \| Dolphinfish @ Roxwood: 4/172 (2.3%) |
+| Low Level Multizone | Scollop, Carp, Grenadier         | $11,000 |                   66 |  126 min |       $167 | Scollop @ Alamo Sea: 47/420 (11.2%) \| Carp @ Land Act Dam: 9/203 (4.4%) \| Grenadier @ Roxwood: 5/172 (2.9%)        |
 
 ## Drop Rate Analysis
 
@@ -50,9 +50,9 @@ Tier drop rates are consistent across locations, suggesting a fixed game mechani
 | Tier        | Alamo Sea | Land Act Dam | Roxwood | Average |
 |-------------|----------:|-------------:|--------:|--------:|
 | ★★★★ purple |      0.2% |         0.0% |    0.0% |    0.1% |
-| ★★★         |      6.4% |        11.3% |   10.3% |    9.3% |
-| ★★          |     26.4% |        27.6% |   29.5% |   27.8% |
-| ★           |     65.5% |        61.1% |   60.3% |   62.3% |
+| ★★★         |      6.4% |        11.3% |    8.7% |    8.8% |
+| ★★          |     26.4% |        27.6% |   32.6% |   28.9% |
+| ★           |     65.5% |        61.1% |   58.7% |   61.8% |
 
 ### Within-Tier Weights
 
@@ -140,42 +140,42 @@ Model fit (25%/20%/20%/15%/10%/10%): χ² = 3.30, p = 0.653 — excellent
 Weight fit: χ² = 2.46, df = 7, p = 0.930 — excellent
 Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 4.74, p = 0.692 — excellent
 
-#### Roxwood — ★★★ (3 fish, 8 observed)
+#### Roxwood — ★★★ (3 fish, 15 observed)
 
 | Fish          | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |---------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| King Mackerel |     4 |      50.0% |      1 |    33.3% |     55% |          55.0% |     -0.4 |
-| Grenadier     |     3 |      37.5% |      1 |    33.3% |     30% |          30.0% |     +0.6 |
-| Dolphinfish   |     1 |      12.5% |      1 |    33.3% |     15% |          15.0% |     -0.2 |
+| King Mackerel |     6 |      40.0% |      1 |    33.3% |     55% |          55.0% |     -2.2 |
+| Grenadier     |     5 |      33.3% |      1 |    33.3% |     30% |          30.0% |     +0.5 |
+| Dolphinfish   |     4 |      26.7% |      1 |    33.3% |     15% |          15.0% |     +1.8 |
 
-Weight fit: χ² = 1.75, df = 2, p = 0.417 — good
-Model fit (55%/30%/15%): χ² = 0.22, p = 0.896 — excellent
+Weight fit: χ² = 0.40, df = 2, p = 0.819 — excellent
+Model fit (55%/30%/15%): χ² = 2.03, p = 0.362 — good
 
-#### Roxwood — ★★ (6 fish, 23 observed)
+#### Roxwood — ★★ (6 fish, 56 observed)
 
 | Fish         | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |--------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Snapper      |     5 |      21.7% |      9 |    19.1% |     25% |          25.0% |     -0.8 |
-| Amberjack    |     5 |      21.7% |      9 |    19.1% |     20% |          20.0% |     +0.4 |
-| Brown Trout  |     5 |      21.7% |      9 |    19.1% |     20% |          20.0% |     +0.4 |
-| Gummy Shark  |     4 |      17.4% |      9 |    19.1% |     15% |          15.0% |     +0.5 |
-| Silver Perch |     3 |      13.0% |      9 |    19.1% |     10% |          10.0% |     +0.7 |
-| Red Snapper  |     1 |       4.3% |      2 |     4.3% |     10% |          10.0% |     -1.3 |
+| Snapper      |    15 |      26.8% |      9 |    23.1% |     25% |          25.0% |     +1.0 |
+| Silver Perch |    12 |      21.4% |      9 |    23.1% |     20% |          20.0% |     +0.8 |
+| Amberjack    |    12 |      21.4% |      9 |    23.1% |     20% |          20.0% |     +0.8 |
+| Gummy Shark  |     7 |      12.5% |      4 |    10.3% |     15% |          15.0% |     -1.4 |
+| Brown Trout  |     7 |      12.5% |      4 |    10.3% |     10% |          10.0% |     +1.4 |
+| Red Snapper  |     3 |       5.4% |      4 |    10.3% |     10% |          10.0% |     -2.6 |
 
-Weight fit: χ² = 0.73, df = 5, p = 0.981 — excellent
-Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.20, p = 0.945 — excellent
+Weight fit: χ² = 2.33, df = 5, p = 0.802 — excellent
+Model fit (25%/20%/20%/15%/10%/10%): χ² = 1.98, p = 0.852 — excellent
 
-#### Roxwood — ★ (7 fish, 47 observed)
+#### Roxwood — ★ (7 fish, 101 observed)
 
 | Fish               | Count | Observed % | Weight | Weight % | Model % | Model % (norm) | Residual |
 |--------------------|------:|-----------:|-------:|---------:|--------:|---------------:|---------:|
-| Grouper            |    14 |      29.8% |     10 |    23.8% |     20% |          21.1% |     +4.1 |
-| Sandy Sprat        |    11 |      23.4% |     10 |    23.8% |     15% |          15.8% |     +3.6 |
-| Dungeness Crab     |     8 |      17.0% |     10 |    23.8% |     15% |          15.8% |     +0.6 |
-| Australian Herring |     4 |       8.5% |      3 |     7.1% |     15% |          15.8% |     -3.4 |
-| Sand Whiting       |     4 |       8.5% |      3 |     7.1% |     10% |          10.5% |     -0.9 |
-| Ocean Jacket       |     3 |       6.4% |      3 |     7.1% |     10% |          10.5% |     -1.9 |
-| Ocean Perch        |     3 |       6.4% |      3 |     7.1% |     10% |          10.5% |     -1.9 |
+| Grouper            |    35 |      34.7% |      9 |    33.3% |     20% |          21.1% |    +13.7 |
+| Dungeness Crab     |    17 |      16.8% |      4 |    14.8% |     15% |          15.8% |     +1.1 |
+| Sandy Sprat        |    15 |      14.9% |      4 |    14.8% |     15% |          15.8% |     -0.9 |
+| Ocean Perch        |    13 |      12.9% |      4 |    14.8% |     15% |          15.8% |     -2.9 |
+| Australian Herring |     9 |       8.9% |      2 |     7.4% |     10% |          10.5% |     -1.6 |
+| Sand Whiting       |     6 |       5.9% |      2 |     7.4% |     10% |          10.5% |     -4.6 |
+| Ocean Jacket       |     6 |       5.9% |      2 |     7.4% |     10% |          10.5% |     -4.6 |
 
-Weight fit: χ² = 1.94, df = 6, p = 0.925 — excellent
-Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 6.77, p = 0.343 — good
+Weight fit: χ² = 1.48, df = 6, p = 0.961 — excellent
+Model fit (20%/15%/15%/15%/10%/10%/10%/5%): χ² = 13.83, p = 0.032 — poor
