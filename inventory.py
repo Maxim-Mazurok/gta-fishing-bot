@@ -22,9 +22,9 @@ pytesseract.pytesseract.tesseract_cmd = (
 # Rate limit: minimum seconds between shift+clicks
 INVENTORY_ACTION_COOLDOWN = 26.0
 
-# Grid slot to shift+click (0-indexed). Configure via env vars.
-INVENTORY_ROW = int(os.environ.get('INVENTORY_ROW', '0'))
-INVENTORY_COL = int(os.environ.get('INVENTORY_COL', '3'))
+# Grid slot to shift+click (1-indexed). Configure via .env file.
+INVENTORY_ROW = int(os.environ.get('INVENTORY_ROW', '1')) - 1
+INVENTORY_COL = int(os.environ.get('INVENTORY_COL', '4')) - 1
 
 
 class InventoryHandler:
