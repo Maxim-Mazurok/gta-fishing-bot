@@ -162,7 +162,7 @@ SECONDS_WAITING_FOR_BITE: dict[str, int] = {
 SECONDS_WAITING_FOR_BITE_DEFAULT = 100  # for unknown locations
 SECONDS_REELING_IN: dict[str, int] = {
     "Alamo Sea": 15,
-    "Land Act Dam": 22,
+    "Land Act Dam": 115 - SECONDS_WAITING_FOR_BITE["Land Act Dam"],
     "Roxwood": 30,
 }
 SECONDS_REELING_IN_DEFAULT = 30  # for unknown locations

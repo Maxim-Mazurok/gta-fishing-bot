@@ -624,6 +624,8 @@ def figure_5_min_envelope(
     sweep_location = locations[0]
     other_locations = locations[1:]
     other_ratios = [optimal.get(loc, 0.01) for loc in other_locations]
+    if sum(other_ratios) == 0:
+        other_ratios = [1.0 / len(other_locations)] * len(other_locations)
     sweep_values, fraction_list = _build_1d_sweep_path(
         sweep_location, other_locations, other_ratios, steps=500,
     )
@@ -777,6 +779,8 @@ def figure_6_objective_decomposition(
     sweep_location = locations[0]
     other_locations = locations[1:]
     other_ratios = [optimal.get(loc, 0.01) for loc in other_locations]
+    if sum(other_ratios) == 0:
+        other_ratios = [1.0 / len(other_locations)] * len(other_locations)
     sweep_values, fraction_list = _build_1d_sweep_path(
         sweep_location, other_locations, other_ratios, steps=500,
     )
