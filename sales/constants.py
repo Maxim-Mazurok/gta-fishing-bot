@@ -150,7 +150,7 @@ TIER_PRICES = {
 
 # Manual notes for special fish sightings (weather, etc.)
 SPECIAL_FISH_NOTES: dict[str, str] = {
-    "3 Eyed Fish": "heavy storm",
+    "3 Eyed Fish": "heavy storm in alamo, nothing special in roxwood tho",
 }
 
 # Time per fish (seconds) – bite wait varies by location
