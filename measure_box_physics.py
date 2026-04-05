@@ -30,7 +30,7 @@ ctypes.windll.shcore.SetProcessDpiAwareness(2)
 sys.path.insert(0, '.')
 from detection import BarDetector
 from capture import ScreenCapture, find_game_window
-from control import FishingController
+from config import CONTROL_HZ
 
 import pydirectinput
 pydirectinput.PAUSE = 0.0
@@ -117,7 +117,7 @@ def run_measurement():
     ]
 
     all_data = []
-    control_interval = 1.0 / FishingController.REFERENCE_HZ
+    control_interval = 1.0 / CONTROL_HZ
 
     for exp_name, sequence in experiments:
         print(f"\n[*] Experiment: {exp_name}")

@@ -33,6 +33,7 @@ from config import (  # noqa: F401
     MINIGAME_GRACE,
     CAST_WAIT_POLL,
     BAR_APPEAR_DELAY,
+    CONTROL_HZ,
     BAR_REDETECT_INTERVAL,
 )
 from detection import BarDetector, detect_on_frame  # noqa: F401

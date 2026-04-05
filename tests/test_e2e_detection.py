@@ -28,7 +28,7 @@ requires_calibration = pytest.mark.skipif(
 )
 
 DETECTION_TOLERANCE = 0.035  # ±0.035 normalized (≈11px at 330px bar height)
-FRAME_DT = 1.0 / 60  # approximate dt between recorded frames
+FPS = 60
 
 
 @requires_frames_1
@@ -227,6 +227,7 @@ class TestE2EStreamDetection:
 
         det = BarDetector()
         frame_time = 0.0
+        dt = 1.0 / FPS
 
         passed = 0
         failed = 0
@@ -238,7 +239,7 @@ class TestE2EStreamDetection:
             if not os.path.exists(fpath):
                 continue
 
-            frame_time += FRAME_DT
+            frame_time += dt
             img = cv2.imread(fpath)
             if img is None:
                 continue
@@ -288,6 +289,7 @@ class TestE2EStreamDetection:
                                       '2026-03-29 23-47-40')
         det = BarDetector()
         frame_time = 0.0
+        dt = 1.0 / FPS
 
         velocities = []
         for i in range(1001, 1100):
@@ -297,7 +299,7 @@ class TestE2EStreamDetection:
             img = cv2.imread(fpath)
             if img is None:
                 continue
-            frame_time += FRAME_DT
+            frame_time += dt
 
             if not det.bar_found:
                 h, w = img.shape[:2]
@@ -330,6 +332,7 @@ class TestE2EStreamDetection:
                                       '2026-03-29 23-47-40')
         det = BarDetector(use_advanced_inside_box=True)
         frame_time = 0.0
+        dt = 1.0 / FPS
         methods = []
 
         for i in range(1188, 1203):
@@ -339,7 +342,7 @@ class TestE2EStreamDetection:
             img = cv2.imread(fpath)
             if img is None:
                 continue
-            frame_time += FRAME_DT
+            frame_time += dt
 
             if not det.bar_found:
                 h, w = img.shape[:2]
