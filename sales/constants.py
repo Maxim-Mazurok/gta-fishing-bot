@@ -115,7 +115,7 @@ PRICES: dict[str, tuple[int, int, str]] = {
     "Bluefin Tuna": (2000, 3, ""),
     "Blue Warehou": (1650, 2, ""),
     "Lion Fish": (1850, 1, ""),
-    "Banded Butterfly": (1500, 1, ""),
+    "Banded Butterflyfish": (1500, 1, ""),
     "Baby Pufferfish": (10_000, 4, "purple"),
     "Bluehead Wrasse": (2150, 1, "green"),
     "Carp": (1850, 2, ""),

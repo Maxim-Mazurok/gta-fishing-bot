@@ -4,7 +4,7 @@ Triggerfish	2
 Atlantic Salmon	3
 Wahoo	2
 Sand Whiting	9
-Banded Butterfly	7
+Banded Butterflyfish	7
 Sturgeon	2
 Murray Cod	9
 Escolar	2
@@ -31,7 +31,7 @@ Cod	3
 Carp	4
 Brook Trout	4
 Black Bream	3
-Banded Butterfly	9
+Banded Butterflyfish	9
 Atlantic Salmon	4
 --sold
 Musky	6
@@ -43,7 +43,7 @@ Triggerfish	7
 Rainbow Trout	2
 Cod	6
 Sand Whiting	3
-Banded Butterfly	5
+Banded Butterflyfish	5
 Atlantic Salmon	5
 Pike	4
 Carp	2
@@ -60,7 +60,7 @@ Triggerfish	14
 Cod	12
 Carp	5
 Sturgeon	1
-Banded Butterfly	14
+Banded Butterflyfish	14
 Murray Cod	18
 Trumpetfish	9
 Rainbow Trout	3

@@ -14,7 +14,7 @@
 | Wahoo            |      12 |     3.6% | xx    |                     |
 | Sturgeon         |      10 |     3.0% | xx    |                     |
 | Murray Cod       |      50 |    14.9% | x     |                     |
-| Banded Butterfly |      35 |    10.4% | x     |                     |
+| Banded Butterflyfish |      35 |    10.4% | x     |                     |
 | Triggerfish      |      28 |     8.4% | x     |                     |
 | Sand Whiting     |      26 |     7.8% | x     |                     |
 | Cod              |      23 |     6.9% | x     |                     |

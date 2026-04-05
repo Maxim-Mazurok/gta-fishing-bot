@@ -2,6 +2,7 @@
 
 import os
 import time
+from collections import deque
 import numpy as np
 import cv2
 from scipy.ndimage import uniform_filter1d
@@ -41,6 +42,8 @@ class BarDetector:
     SPEED_BANDS = (0.18, 0.30, 0.60)
     SPEED_BAND_TOLERANCE = 0.12
     SPEED_ESTIMATE_MIN = 0.05
+    SPEED_ESTIMATE_MAX = 0.60
+    SPEED_HISTORY_SIZE = 30
     OBSERVATION_JUMP_LIMIT = 0.08
     OBSERVATION_BLEND_LIMIT = 0.14
     VIRTUAL_FISH_MAX_DT = 0.20
@@ -83,6 +86,7 @@ class BarDetector:
         self.virtual_fish_velocity = 0.0
         self.fish_speed = 0.0
         self.fish_speed_band = 0.0
+        self.speed_history = deque(maxlen=self.SPEED_HISTORY_SIZE)
         self.fish_direction = 0
         self.pending_fish_direction = 0
         self.pending_direction_frames = 0
@@ -1006,16 +1010,22 @@ class BarDetector:
         return speed
 
     def _update_speed_model(self, velocity):
-        """Keep a stable speed estimate for virtual fish carry-forward."""
+        """Keep a stable speed estimate using sliding-window median."""
         speed = abs(velocity)
         if speed < self.SPEED_ESTIMATE_MIN:
             return
+        if speed > self.SPEED_ESTIMATE_MAX:
+            return
 
         snapped_speed = self._snap_speed_band(speed)
-        if self.fish_speed <= 0.0:
-            self.fish_speed = snapped_speed
+        self.speed_history.append(snapped_speed)
+
+        if len(self.speed_history) >= 3:
+            median_speed = sorted(self.speed_history)[len(self.speed_history) // 2]
         else:
-            self.fish_speed = 0.65 * self.fish_speed + 0.35 * snapped_speed
+            median_speed = snapped_speed
+
+        self.fish_speed = median_speed
         self.fish_speed_band = self._snap_speed_band(self.fish_speed)
 
     def _virtual_motion_direction(self):
