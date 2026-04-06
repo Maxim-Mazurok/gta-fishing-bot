@@ -177,6 +177,7 @@ FISH_WEIGHTS: dict[str, int] = {
     "Ocean Perch": 300,
     "Red Snapper": 400,
     "Redfish": 300,
+    "Salmon": 400,
     "Sand Whiting": 300,
     "Sandy Sprat": 300,
     "Silver Perch": 400,

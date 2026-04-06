@@ -11,7 +11,7 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 |--:|----------|----------:|----------------:|-----------:|-----------:|--------------:|-------:|--------------:|---------------:|-----:|---------:|
 | 1 | Alamo Sea | 4.38 | **6.34** | 338g | $1,481 | $661 | 10,762 | $47,185 | $68,232 | 496 | 99% |
 | 2 | Roxwood | 5.34 | **6.12** | 331g | $1,769 | $258 | 8,464 | $45,178 | $51,770 | 255 | 100% |
-| 3 | Dam | 4.85 | **5.91** | 343g | $1,664 | $362 | 10,557 | $51,207 | $62,358 | 341 | 100% |
+| 3 | Dam | 4.85 | **5.97** | 344g | $1,669 | $386 | 10,588 | $51,351 | $63,220 | 415 | 100% |
 
 ### Alamo Sea — Fish by $/gram
 
@@ -59,23 +59,23 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 
 | Fish | $/fish | Weight | $/g | Drop % | Stars | Known |
 |------|-------:|-------:|----:|-------:|-------|-------|
-| Pike | $2,150 | 400g | 5.38 | 3.2% | xxx | est. |
-| Rainbow Trout | $2,150 | 400g | 5.38 | 2.1% | xxx | est. |
-| Murray Cod | $1,500 | 300g | 5.00 | 15.0% | x | yes |
-| Banded Butterflyfish | $1,500 | 300g | 5.00 | 10.3% | x | yes |
-| Triggerfish | $1,500 | 300g | 5.00 | 8.2% | x | yes |
-| Sand Whiting | $1,500 | 300g | 5.00 | 7.6% | x | yes |
-| Cod | $1,500 | 300g | 5.00 | 7.3% | x | yes |
-| Escolar | $1,500 | 300g | 5.00 | 5.9% | x | yes |
-| Brook Trout | $1,500 | 300g | 5.00 | 4.7% | x | yes |
+| Pike | $2,150 | 400g | 5.38 | 3.1% | xxx | est. |
+| Rainbow Trout | $2,150 | 400g | 5.38 | 2.7% | xxx | est. |
+| Murray Cod | $1,500 | 300g | 5.00 | 14.7% | x | yes |
+| Banded Butterflyfish | $1,500 | 300g | 5.00 | 9.9% | x | yes |
+| Triggerfish | $1,500 | 300g | 5.00 | 8.9% | x | yes |
+| Sand Whiting | $1,500 | 300g | 5.00 | 8.4% | x | yes |
+| Cod | $1,500 | 300g | 5.00 | 6.0% | x | yes |
+| Escolar | $1,500 | 300g | 5.00 | 6.0% | x | yes |
+| Brook Trout | $1,500 | 300g | 5.00 | 4.6% | x | yes |
 | Black Bream | $1,500 | 300g | 5.00 | 2.9% | x | yes |
-| Atlantic Salmon | $1,850 | 400g | 4.62 | 6.7% | xx | yes |
-| Trevella | $1,850 | 400g | 4.62 | 5.6% | xx | yes |
-| Trumpetfish | $1,850 | 400g | 4.62 | 4.7% | xx | yes |
+| Atlantic Salmon | $1,850 | 400g | 4.62 | 6.5% | xx | yes |
+| Trevella | $1,850 | 400g | 4.62 | 5.1% | xx | yes |
+| Sturgeon | $1,850 | 400g | 4.62 | 4.1% | xx | est. |
 | Carp | $1,850 | 400g | 4.62 | 4.1% | xx | est. |
-| Wahoo | $1,850 | 400g | 4.62 | 3.8% | xx | est. |
-| Sturgeon | $1,850 | 400g | 4.62 | 2.9% | xx | est. |
-| Musky | $2,150 | 500g | 4.30 | 5.0% | xxx | yes |
+| Trumpetfish | $1,850 | 400g | 4.62 | 3.9% | xx | yes |
+| Wahoo | $1,850 | 400g | 4.62 | 3.6% | xx | est. |
+| Musky | $2,150 | 500g | 4.30 | 5.5% | xxx | yes |
 
 ## Ranked by Value Density ($/gram)
 
