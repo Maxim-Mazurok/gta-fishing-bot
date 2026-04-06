@@ -23,7 +23,6 @@ Red Snapper  3
 Ocean Perch  12
 Gummy Shark  5
 Sandy Sprat  8
-Esky  1
 3 Eyed Fish  1
 Silver Perch  4
 Australian Herring  8

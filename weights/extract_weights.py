@@ -18,6 +18,10 @@ from pathlib import Path
 import cv2
 import pytesseract
 
+pytesseract.pytesseract.tesseract_cmd = (
+    r"C:\Users\Maxim.Mazurok\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+)
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sales.constants import FISH_WEIGHTS, PRICES

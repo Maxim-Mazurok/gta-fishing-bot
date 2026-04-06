@@ -68,3 +68,11 @@ Wahoo	3
 Sand Whiting	7
 Musky	6
 Pike	2
+---
+Pike	1
+Escolar	1
+Murray Cod	1
+Cod	1
+Wahoo	1
+Cod	1
+Atlantic Salmon	1

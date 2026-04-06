@@ -13,6 +13,11 @@ from collections import deque
 from datetime import datetime
 import cv2
 import numpy as np
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = (
+    r'C:\Users\Maxim.Mazurok\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+)
 
 from config import (
     BLUE_H_MIN, BLUE_H_MAX,
@@ -23,7 +28,7 @@ from config import (
 from detection import BarDetector
 from capture import ScreenCapture, find_game_window
 from control import FishingController, GameState
-from inventory import InventoryHandler
+from inventory import InventoryHandler, BootOffloadHandler, BOOT_OFFLOAD_ENABLED, BOOT_OFFLOAD_INTERVAL
 from projection_calibration import (
     PROJECTION_TIMING_WINDOW_FRAMES,
     resolve_projection_outcome,
@@ -519,6 +524,119 @@ def _set_detector_note(state_ctx, note):
         recorder['last_note'] = note
 
 
+def _check_you_caught_text(capture):
+    """OCR the top-right corner of the game window for 'You caught ...!' text.
+
+    Returns the fish name string if found, or None.
+    """
+    import re
+    region = capture._region
+    grab_region = {
+        'left': region['left'],
+        'top': region['top'],
+        'width': region['width'],
+        'height': region['height'],
+    }
+    try:
+        screenshot = capture.sct.grab(grab_region)
+    except Exception:
+        try:
+            capture.sct = __import__('mss').mss()
+            screenshot = capture.sct.grab(grab_region)
+        except Exception:
+            return None
+    img = np.array(screenshot)[:, :, :3]
+    h, w = img.shape[:2]
+
+    # "You caught ...!" appears in the top-right corner
+    roi = img[0:int(h * 0.15), int(w * 0.55):]
+
+    # Preprocess: grayscale, threshold for white text
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    scale = max(1.0, 1500 / gray.shape[1])
+    if scale > 1:
+        gray = cv2.resize(gray, (int(gray.shape[1] * scale), int(gray.shape[0] * scale)),
+                          interpolation=cv2.INTER_CUBIC)
+    _, thresh = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+
+    try:
+        text = pytesseract.image_to_string(thresh, config='--psm 6 --oem 3')
+    except Exception:
+        return None
+
+    # Match "You caught <fish name>!" (case-insensitive)
+    m = re.search(r'[Yy]ou\s+caught\s+(.+?)[\s!]*$', text, re.MULTILINE)
+    if m:
+        fish_name = m.group(1).strip().rstrip('!').strip()
+        # Strip leading article "a " or "an "
+        fish_name = re.sub(r'^[Aa]n?\s+', '', fish_name)
+        if len(fish_name) >= 2:
+            return fish_name
+    return None
+
+
+# --- Fish catch logging ---
+# Load sales constants directly (sales/ is not a proper package)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sales'))
+from constants import PRICES, REGIONS, TIER_PRICES  # noqa: E402
+from constants import SALES_DIR as _SALES_DIR  # noqa: E402
+sys.path.pop(0)
+
+_LOCATION_TO_KEY = {v: k for k, v in REGIONS.items()}
+
+
+def _fish_location(name):
+    """Determine which location a fish belongs to based on its price and star tier."""
+    if name not in PRICES:
+        return "Unknown"
+    price, star_count, color = PRICES[name]
+    if color == "green":
+        return "Humane Labs"
+    if color == "purple" or star_count == 0:
+        return "Special"
+    for location, tier_prices in TIER_PRICES.items():
+        if tier_prices.get(star_count) == price:
+            return location
+    return "Unknown"
+
+
+def _log_fish_catch(fish_name):
+    """Append a caught fish to the appropriate area log file."""
+    location = _fish_location(fish_name)
+    key = _LOCATION_TO_KEY.get(location)
+    if not key:
+        print(f"[!] Unknown area for \"{fish_name}\" (location={location}), not logging")
+        return
+    log_path = _SALES_DIR / f"{key}-log.md"
+    try:
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write(f"{fish_name}\t1\n")
+        print(f"[+] Logged \"{fish_name}\" to {key}-log.md")
+    except Exception as e:
+        print(f"[!] Failed to log fish: {e}")
+
+
+def _transition_to_caught(state_ctx, fish_name):
+    """Transition to CAUGHT state after OCR-confirmed catch."""
+    now = state_ctx['now']
+    detector = state_ctx['detector']
+    controller = state_ctx['controller']
+    print(f"[*] OCR confirmed catch: \"{fish_name}\"")
+    _log_fish_catch(fish_name)
+    detector.bar_found = False
+    state_ctx['state'] = GameState.CAUGHT
+    state_ctx['state_start'] = now
+    state_ctx['timing']['catch_time'] = now
+    state_ctx['catches'] += 1
+    state_ctx['fish_last_moved'] = None
+    state_ctx['fish_last_y'] = None
+    state_ctx['progress_last_seen'] = None
+    state_ctx['bar_signal_lost'] = None
+    if controller.space_held:
+        pydirectinput.keyUp('space')
+        controller.space_held = False
+
+
 def _handle_idle(state_ctx):
     """Handle IDLE state: anti-AFK movement and casting."""
     now = state_ctx['now']
@@ -530,6 +648,24 @@ def _handle_idle(state_ctx):
     inventory = state_ctx['inventory']
     if inventory.check_and_act(capture=state_ctx['capture'], pydirectinput=pydirectinput):
         return  # Inventory was open, don't cast yet
+
+    # Check if boot offload is due (before casting)
+    boot_offload = state_ctx.get('boot_offload')
+    if boot_offload is not None and boot_offload.is_offload_due():
+        elapsed_min = (time.perf_counter() - boot_offload._last_offload_time) / 60.0
+        print(f"[BOOT] Offload due ({elapsed_min:.0f}min elapsed, "
+              f"interval={BOOT_OFFLOAD_INTERVAL / 60.0:.0f}min)")
+        if boot_offload.perform_offload(state_ctx['capture'], pydirectinput):
+            # "2" press in offload also casts — go straight to WAITING
+            state_ctx['state'] = GameState.WAITING
+            state_ctx['state_start'] = now
+            state_ctx['timing']['cast_start'] = now
+            state_ctx['detector'].bar_found = False
+            state_ctx['controller'].reset()
+            state_ctx['prev_debug_fish_y'] = None
+            return
+        # Offload failed — will retry next time we enter IDLE
+        print("[BOOT] Offload failed, will retry next IDLE")
 
     if state_ctx['reel_only']:
         state_ctx['state'] = GameState.WAITING
@@ -704,6 +840,9 @@ def _check_blue_bar_gone(state_ctx, col_strip, blue_ratio, catch_allowed):
             state_ctx['low_blue_count'] = 0
             return True
         print(f"[*] Blue bar gone ({state_ctx['low_blue_count']} frames, ratio={blue_ratio:.1%}). Fish caught!")
+        fish_name = _check_you_caught_text(state_ctx['capture'])
+        if fish_name:
+            print(f"[*] OCR confirmed: \"{fish_name}\"")
         diag_dir = os.path.join(os.path.dirname(__file__), 'diag_blue_gone')
         recorder = state_ctx.get('debug_recorder')
         if recorder is not None:
@@ -836,7 +975,13 @@ def _handle_minigame(state_ctx):
         state_ctx['fish_last_y'] = fish_y
     elif now - state_ctx['fish_last_moved'] >= FISH_STUCK_TIMEOUT:
         print(f"[!] Fish stuck at {fish_y:.3f} for {FISH_STUCK_TIMEOUT}s. "
-              f"Assuming false positive, recasting.")
+              f"Assuming false positive, checking OCR...")
+        fish_name = _check_you_caught_text(capture)
+        if fish_name:
+            _transition_to_caught(state_ctx, fish_name)
+            detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+            return
+        print("[!] No 'You caught' text found, recasting.")
         detector.bar_found = False
         state_ctx['state'] = GameState.IDLE
         state_ctx['state_start'] = now
@@ -860,7 +1005,13 @@ def _handle_minigame(state_ctx):
             state_ctx['progress_last_seen'] = state_ctx['state_start'] + MINIGAME_GRACE
         if now - state_ctx['progress_last_seen'] >= PROGRESS_STALL_TIMEOUT:
             print(f"[!] Progress stalled at 0 for {PROGRESS_STALL_TIMEOUT}s. "
-                  f"Minigame likely ended, recasting.")
+                  f"Minigame likely ended, checking OCR...")
+            fish_name = _check_you_caught_text(capture)
+            if fish_name:
+                _transition_to_caught(state_ctx, fish_name)
+                detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+                return
+            print("[!] No 'You caught' text found, recasting.")
             detector.bar_found = False
             state_ctx['state'] = GameState.IDLE
             state_ctx['state_start'] = now
@@ -898,7 +1049,13 @@ def _handle_minigame(state_ctx):
             state_ctx['bar_signal_lost'] = now
         elif now - state_ctx['bar_signal_lost'] >= BAR_SIGNAL_TIMEOUT:
             print(f"[!] Bar gone: no valid box (span={box_span:.2f}) and no strong blue "
-                  f"({strong_blue_ratio:.1%}) for {BAR_SIGNAL_TIMEOUT}s. Recasting.")
+                  f"({strong_blue_ratio:.1%}) for {BAR_SIGNAL_TIMEOUT}s. Checking OCR...")
+            fish_name = _check_you_caught_text(capture)
+            if fish_name:
+                _transition_to_caught(state_ctx, fish_name)
+                detector.col_x1, detector.col_x2, detector.col_y1, detector.col_y2, detector.prog_x1, detector.prog_x2 = abs_coords
+                return
+            print("[!] No 'You caught' text found, recasting.")
             detector.bar_found = False
             state_ctx['state'] = GameState.IDLE
             state_ctx['state_start'] = now
@@ -1006,6 +1163,37 @@ _STATE_HANDLERS = {
 }
 
 
+def run_boot_offload():
+    """Run a single boot offload immediately and exit."""
+    global pydirectinput
+    import pydirectinput as pdi
+    pydirectinput = pdi
+    pydirectinput.FAILSAFE = True
+
+    game_win = find_game_window('fivem')
+    if game_win:
+        print(f"[*] Found game window: {game_win['title'][:60]}")
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = game_win['hwnd']
+            user32.ShowWindow(hwnd, 9)
+            user32.SetForegroundWindow(hwnd)
+            print("[*] Game window focused. Starting offload in 1s...")
+            time.sleep(1.0)
+        except Exception:
+            print("[!] Could not focus window. Starting in 3s...")
+            time.sleep(3.0)
+    else:
+        print("[!] FiveM window not found, using primary monitor. Starting in 3s...")
+        time.sleep(3.0)
+
+    capture = ScreenCapture(game_window=game_win)
+    handler = BootOffloadHandler()
+    ok = handler.perform_offload(capture, pydirectinput)
+    print(f"[*] Offload {'succeeded' if ok else 'FAILED'}")
+    sys.exit(0 if ok else 1)
+
+
 def run_automation(debug=False, reel_only=False):
     """Main automation loop."""
     global pydirectinput
@@ -1035,6 +1223,7 @@ def run_automation(debug=False, reel_only=False):
     detector = BarDetector()
     controller = FishingController()
     inventory = InventoryHandler()
+    boot_offload = BootOffloadHandler() if BOOT_OFFLOAD_ENABLED else None
 
     # Shared state context for handler functions
     state_ctx = {
@@ -1068,6 +1257,7 @@ def run_automation(debug=False, reel_only=False):
         'debug_recorder': _create_live_debug_recorder(debug),
         'prev_debug_fish_y': None,
         'inventory': inventory,
+        'boot_offload': boot_offload,
         'fish_last_moved': None,
         'fish_last_y': None,
         'progress_last_seen': None,

@@ -48,10 +48,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GTA RP Fishing Bot')
     parser.add_argument('--debug', action='store_true', help='Show debug visualization')
     parser.add_argument('--reel', action='store_true', help='Reel-only mode: skip casting, just search for minigame and play it')
+    parser.add_argument('--offload', action='store_true', help='Run a single boot offload immediately and exit')
     parser.add_argument('--test', type=str, help='Test detection on image file or frame directory')
     args = parser.parse_args()
 
     if args.test:
         run_test(args.test, debug=True)
+    elif args.offload:
+        from automation import run_boot_offload
+        run_boot_offload()
     else:
         run_automation(debug=args.debug, reel_only=args.reel)

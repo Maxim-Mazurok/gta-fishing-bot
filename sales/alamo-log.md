@@ -84,9 +84,6 @@ Redfish	7
 Snow Crab	4
 Blue Warehou	3
 3 Eyed Fish	1
-Esky	1
-Esky	1
-Patch Kit	1
 Silver Trevally	4
 Morwhong	5
 Southern Tuna   3

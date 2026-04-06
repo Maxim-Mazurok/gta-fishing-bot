@@ -9,23 +9,23 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 
 | # | Location | $/g (sale) | $/g (w/ bundles) | Avg Weight | Avg $/fish | Bundle $/fish | g/hour | $/hour (sale) | $/hour (total) | Fish | Coverage |
 |--:|----------|----------:|----------------:|-----------:|-----------:|--------------:|-------:|--------------:|---------------:|-----:|---------:|
-| 1 | Alamo Sea | 4.38 | **6.33** | 338g | $1,481 | $657 | 10,762 | $47,185 | $68,105 | 499 | 99% |
-| 2 | Roxwood | 5.34 | **6.11** | 331g | $1,769 | $257 | 8,464 | $45,178 | $51,744 | 256 | 99% |
-| 3 | Dam | 4.85 | **5.92** | 343g | $1,664 | $369 | 10,563 | $51,206 | $62,556 | 335 | 100% |
+| 1 | Alamo Sea | 4.38 | **6.34** | 338g | $1,481 | $661 | 10,762 | $47,185 | $68,232 | 496 | 99% |
+| 2 | Roxwood | 5.34 | **6.12** | 331g | $1,769 | $258 | 8,464 | $45,178 | $51,770 | 255 | 100% |
+| 3 | Dam | 4.85 | **5.91** | 343g | $1,664 | $362 | 10,557 | $51,207 | $62,358 | 341 | 100% |
 
 ### Alamo Sea — Fish by $/gram
 
 | Fish | $/fish | Weight | $/g | Drop % | Stars | Known |
 |------|-------:|-------:|----:|-------:|-------|-------|
 | Silver Trevally | $2,000 | 400g | 5.00 | 4.6% | xxx | est. |
-| Albacore | $1,350 | 300g | 4.50 | 15.2% | x | yes |
-| Scollop | $1,350 | 300g | 4.50 | 10.4% | x | est. |
-| Halibut | $1,350 | 300g | 4.50 | 10.2% | x | yes |
-| Broadbill | $1,350 | 300g | 4.50 | 9.8% | x | yes |
-| Redfish | $1,350 | 300g | 4.50 | 7.0% | x | yes |
+| Albacore | $1,350 | 300g | 4.50 | 15.3% | x | yes |
+| Scollop | $1,350 | 300g | 4.50 | 10.5% | x | est. |
+| Halibut | $1,350 | 300g | 4.50 | 10.3% | x | yes |
+| Broadbill | $1,350 | 300g | 4.50 | 9.9% | x | yes |
+| Redfish | $1,350 | 300g | 4.50 | 7.1% | x | yes |
 | Morwhong | $1,350 | 300g | 4.50 | 5.6% | x | est. |
 | Flathead | $1,350 | 300g | 4.50 | 5.6% | x | yes |
-| Southern Garfish | $1,650 | 400g | 4.12 | 7.0% | xx | yes |
+| Southern Garfish | $1,650 | 400g | 4.12 | 7.1% | xx | yes |
 | Trout | $1,650 | 400g | 4.12 | 6.0% | xx | yes |
 | Blue Warehou | $1,650 | 400g | 4.12 | 5.4% | xx | yes |
 | Snow Crab | $1,650 | 400g | 4.12 | 3.4% | xx | yes |
@@ -38,44 +38,44 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 
 | Fish | $/fish | Weight | $/g | Drop % | Stars | Known |
 |------|-------:|-------:|----:|-------:|-------|-------|
-| Dolphinfish | $2,350 | 300g | 7.83 | 2.3% | xxx | yes |
+| Dolphinfish | $2,350 | 300g | 7.83 | 2.4% | xxx | yes |
 | Grenadier | $2,350 | 400g | 5.88 | 4.3% | xxx | est. |
-| King Mackerel | $2,350 | 400g | 5.88 | 2.3% | xxx | est. |
+| King Mackerel | $2,350 | 400g | 5.88 | 2.4% | xxx | est. |
 | Grouper | $1,650 | 300g | 5.50 | 17.6% | x | yes |
-| Dungeness Crab | $1,650 | 300g | 5.50 | 10.5% | x | yes |
+| Dungeness Crab | $1,650 | 300g | 5.50 | 10.6% | x | yes |
 | Ocean Perch | $1,650 | 300g | 5.50 | 9.8% | x | yes |
-| Australian Herring | $1,650 | 300g | 5.50 | 6.6% | x | yes |
-| Amberjack | $1,650 | 300g | 5.50 | 6.2% | x | yes |
+| Australian Herring | $1,650 | 300g | 5.50 | 6.7% | x | yes |
+| Amberjack | $1,650 | 300g | 5.50 | 6.3% | x | yes |
 | Ocean Jacket | $1,650 | 300g | 5.50 | 3.5% | x | yes |
-| Snapper | $2,000 | 400g | 5.00 | 7.4% | xx | yes |
-| Silver Perch | $2,000 | 400g | 5.00 | 6.2% | xx | yes |
+| Snapper | $2,000 | 400g | 5.00 | 7.5% | xx | yes |
+| Silver Perch | $2,000 | 400g | 5.00 | 6.3% | xx | yes |
 | Gummy Shark | $2,000 | 400g | 5.00 | 4.7% | xx | yes |
 | Brown Trout | $2,000 | 400g | 5.00 | 3.9% | xx | est. |
-| Sand Whiting | $1,500 | 300g | 5.00 | 2.3% | x | yes |
-| Red Snapper | $2,000 | 400g | 5.00 | 2.3% | xx | yes |
+| Sand Whiting | $1,500 | 300g | 5.00 | 2.4% | x | yes |
+| Red Snapper | $2,000 | 400g | 5.00 | 2.4% | xx | yes |
 | Sandy Sprat | $1,350 | 300g | 4.50 | 9.0% | x | yes |
 
 ### Dam — Fish by $/gram
 
 | Fish | $/fish | Weight | $/g | Drop % | Stars | Known |
 |------|-------:|-------:|----:|-------:|-------|-------|
-| Pike | $2,150 | 400g | 5.38 | 3.0% | xxx | est. |
+| Pike | $2,150 | 400g | 5.38 | 3.2% | xxx | est. |
 | Rainbow Trout | $2,150 | 400g | 5.38 | 2.1% | xxx | est. |
-| Murray Cod | $1,500 | 300g | 5.00 | 14.9% | x | yes |
-| Banded Butterflyfish | $1,500 | 300g | 5.00 | 10.4% | x | yes |
-| Triggerfish | $1,500 | 300g | 5.00 | 8.4% | x | yes |
-| Sand Whiting | $1,500 | 300g | 5.00 | 7.8% | x | yes |
-| Cod | $1,500 | 300g | 5.00 | 6.9% | x | yes |
-| Escolar | $1,500 | 300g | 5.00 | 5.7% | x | yes |
-| Brook Trout | $1,500 | 300g | 5.00 | 4.8% | x | yes |
-| Black Bream | $1,500 | 300g | 5.00 | 3.0% | x | yes |
-| Atlantic Salmon | $1,850 | 400g | 4.62 | 6.9% | xx | yes |
-| Trevella | $1,850 | 400g | 4.62 | 5.7% | xx | yes |
-| Trumpetfish | $1,850 | 400g | 4.62 | 4.8% | xx | yes |
-| Carp | $1,850 | 400g | 4.62 | 4.2% | xx | est. |
-| Wahoo | $1,850 | 400g | 4.62 | 3.6% | xx | est. |
-| Sturgeon | $1,850 | 400g | 4.62 | 3.0% | xx | est. |
-| Musky | $2,150 | 500g | 4.30 | 5.1% | xxx | yes |
+| Murray Cod | $1,500 | 300g | 5.00 | 15.0% | x | yes |
+| Banded Butterflyfish | $1,500 | 300g | 5.00 | 10.3% | x | yes |
+| Triggerfish | $1,500 | 300g | 5.00 | 8.2% | x | yes |
+| Sand Whiting | $1,500 | 300g | 5.00 | 7.6% | x | yes |
+| Cod | $1,500 | 300g | 5.00 | 7.3% | x | yes |
+| Escolar | $1,500 | 300g | 5.00 | 5.9% | x | yes |
+| Brook Trout | $1,500 | 300g | 5.00 | 4.7% | x | yes |
+| Black Bream | $1,500 | 300g | 5.00 | 2.9% | x | yes |
+| Atlantic Salmon | $1,850 | 400g | 4.62 | 6.7% | xx | yes |
+| Trevella | $1,850 | 400g | 4.62 | 5.6% | xx | yes |
+| Trumpetfish | $1,850 | 400g | 4.62 | 4.7% | xx | yes |
+| Carp | $1,850 | 400g | 4.62 | 4.1% | xx | est. |
+| Wahoo | $1,850 | 400g | 4.62 | 3.8% | xx | est. |
+| Sturgeon | $1,850 | 400g | 4.62 | 2.9% | xx | est. |
+| Musky | $2,150 | 500g | 4.30 | 5.0% | xxx | yes |
 
 ## Ranked by Value Density ($/gram)
 

@@ -3,6 +3,10 @@
 Monitors the screen for the inventory UI (detected via OCR for "YOUR INVENTORY"
 text), locates the grid slots, and shift+clicks the second row first column
 to move items. Rate-limited to at most once every 26 seconds.
+
+Also supports a "boot offload" mode: periodically opens a nearby vehicle's
+boot (trunk) and shift+clicks items from personal inventory into the vehicle,
+allowing longer unattended fishing sessions without hitting inventory limits.
 """
 
 import os
@@ -28,6 +32,21 @@ INVENTORY_ENABLED = os.environ.get('INVENTORY_ENABLED', 'true').lower() in ('1',
 # Grid slot to shift+click (1-indexed). Configure via .env file.
 INVENTORY_ROW = int(os.environ.get('INVENTORY_ROW', '1')) - 1
 INVENTORY_COL = int(os.environ.get('INVENTORY_COL', '4')) - 1
+
+# --- Boot offload settings (env-configurable) ---
+# Enable boot offload mode (disables regular inventory clicking when active).
+BOOT_OFFLOAD_ENABLED = os.environ.get('BOOT_OFFLOAD_ENABLED', 'false').lower() in ('1', 'true', 'yes')
+# Interval in seconds between offloads (default: 1 hour).
+BOOT_OFFLOAD_INTERVAL = float(os.environ.get('BOOT_OFFLOAD_INTERVAL', '3600'))
+# Number of shift+clicks to perform when offloading (default: 20).
+BOOT_OFFLOAD_CLICKS = int(os.environ.get('BOOT_OFFLOAD_CLICKS', '20'))
+# Delay in seconds between each shift+click (default: 1s).
+BOOT_OFFLOAD_CLICK_DELAY = float(os.environ.get('BOOT_OFFLOAD_CLICK_DELAY', '1.0'))
+
+# When boot offload is active, disable regular per-catch inventory clicking.
+if BOOT_OFFLOAD_ENABLED and INVENTORY_ENABLED:
+    print("[INV] Boot offload enabled — disabling regular inventory clicking")
+    INVENTORY_ENABLED = False
 
 
 class InventoryHandler:
@@ -237,3 +256,309 @@ class InventoryHandler:
         if 0 < cx < w and 0 < cy < h:
             return (cx, cy)
         return None
+
+
+class BootOffloadHandler:
+    """Periodically offloads inventory into a nearby vehicle boot (trunk).
+
+    When the configured interval has elapsed, the next fish catch triggers
+    the offload sequence:
+      1. Press "e" to open the interaction menu.
+      2. OCR-find the "Boot" option and click it.
+      3. Wait for the boot UI ("VEHICLE BOOT") to fully load.
+      4. Shift+click the configured inventory slot N times (transfers items).
+      5. Press "2" to close the boot and immediately cast the rod again.
+    """
+
+    def __init__(self):
+        self._last_offload_time = time.perf_counter()
+        self._cached_slot = None
+        self._cached_window_size = None
+
+    def is_offload_due(self):
+        """Return True when enough time has passed since the last offload."""
+        if not BOOT_OFFLOAD_ENABLED:
+            return False
+        return (time.perf_counter() - self._last_offload_time) >= BOOT_OFFLOAD_INTERVAL
+
+    def perform_offload(self, capture, pydirectinput):
+        """Execute the full boot offload sequence.
+
+        Returns True if the offload succeeded and "2" was pressed (casting).
+        Returns False if any step failed (caller should fall back to normal flow).
+        """
+        region = capture._region
+        elapsed_min = (time.perf_counter() - self._last_offload_time) / 60.0
+        print(f"[BOOT] Starting offload ({BOOT_OFFLOAD_CLICKS} items, "
+              f"{elapsed_min:.0f}min since last)...")
+
+        # Step 1: Press "e" to open interaction menu
+        print("[BOOT] Opening interaction menu (pressing 'e')...")
+        pydirectinput.press('e')
+        time.sleep(1.0)
+
+        # Step 2: Find "Boot" text via OCR and click it
+        if not self._find_and_click_boot(capture, region, pydirectinput):
+            print("[BOOT] Could not find 'Boot' option — likely a false-positive catch")
+            print("[BOOT] Pressing 'e' to close vehicle menu, will retry next catch")
+            pydirectinput.press('e')
+            time.sleep(0.5)
+            return False
+
+        # Step 3: Wait for boot UI to fully load
+        if not self._wait_for_boot_ui(capture, region):
+            print("[BOOT] Boot UI did not open properly — aborting offload")
+            pydirectinput.press('e')
+            time.sleep(0.5)
+            return False
+
+        # Step 4: Shift+click the inventory slot N times
+        self._transfer_items(capture, region, pydirectinput)
+
+        # Step 5: Press "2" to close boot and cast
+        print("[BOOT] Pressing '2' to close boot and cast...")
+        pydirectinput.press('2')
+        time.sleep(1.0)
+
+        self._last_offload_time = time.perf_counter()
+        print("[BOOT] Offload complete!")
+        return True
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _grab_screen(self, capture, region):
+        """Capture the full game window as a BGR numpy array."""
+        grab_region = {
+            'left': region['left'],
+            'top': region['top'],
+            'width': region['width'],
+            'height': region['height'],
+        }
+        try:
+            screenshot = capture.sct.grab(grab_region)
+        except Exception:
+            capture.sct = __import__('mss').mss()
+            screenshot = capture.sct.grab(grab_region)
+        return np.array(screenshot)[:, :, :3]
+
+    @staticmethod
+    def _ocr_preprocess(img, target_width=1500):
+        """Convert an image region to a thresholded grayscale, scaled so that
+        its width is at least *target_width* pixels.  This ensures OCR gets
+        consistently-sized text regardless of the source resolution.
+
+        Returns (thresh, scale_factor).
+        """
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        scale = max(1.0, target_width / gray.shape[1])
+        if scale > 1:
+            gray = cv2.resize(
+                gray,
+                (int(gray.shape[1] * scale), int(gray.shape[0] * scale)),
+                interpolation=cv2.INTER_CUBIC,
+            )
+        _, thresh = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+        return thresh, scale
+
+    @staticmethod
+    def _crop_roi(img, x_frac, y_frac):
+        """Crop an image region using fractional bounds (resolution-agnostic).
+
+        Args:
+            img: Source BGR image.
+            x_frac: (left_frac, right_frac) — horizontal bounds as [0,1] fractions.
+            y_frac: (top_frac, bottom_frac) — vertical bounds as [0,1] fractions.
+
+        Returns:
+            (roi, roi_left, roi_top) where roi_left/roi_top are pixel offsets
+            to convert ROI coords back to full-image coords.
+        """
+        h, w = img.shape[:2]
+        x1, x2 = int(w * x_frac[0]), int(w * x_frac[1])
+        y1, y2 = int(h * y_frac[0]), int(h * y_frac[1])
+        return img[y1:y2, x1:x2], x1, y1
+
+    def _find_and_click_boot(self, capture, region, pydirectinput, retries=5):
+        """OCR the screen to locate the standalone 'Boot' menu option and click it.
+
+        Uses y-proximity (not line_num) to distinguish the standalone "Boot"
+        entry from "Unlock Vehicle Boot".  Words within ±half their own height
+        are considered on the same visual line.  Icon OCR artifacts (< 3 chars)
+        are ignored.
+
+        Fallback: if the vehicle menu is detected (other items visible) but
+        "Boot" isn't found by OCR, click at its expected position in the menu.
+        """
+        menu_detected = False
+        # Known vehicle menu items (lowercase) — if we see these, menu is open
+        _MENU_MARKERS = {'engine', 'inspect', 'hood', 'unlock', 'vehicle', 'enter', 'tyres', 'tires', 'fix'}
+
+        for attempt in range(retries):
+            img = self._grab_screen(capture, region)
+            roi, roi_x, roi_y = self._crop_roi(img, (0.35, 0.80), (0.15, 0.85))
+            # Use higher upscaling (2500) — menu text is small
+            thresh, scale = self._ocr_preprocess(roi, target_width=2500)
+
+            try:
+                data = pytesseract.image_to_data(
+                    thresh,
+                    config='--psm 6 --oem 3',
+                    output_type=pytesseract.Output.DICT,
+                )
+            except Exception as e:
+                print(f"[BOOT] OCR error: {e}")
+                time.sleep(0.5)
+                continue
+
+            # Collect all "real" words (3+ chars) with their vertical centres
+            real_entries = []
+            for i, text in enumerate(data['text']):
+                word = text.strip()
+                if len(word) >= 3:
+                    cy = data['top'][i] + data['height'][i] / 2
+                    real_entries.append((i, word.lower(), cy, data['height'][i]))
+
+            words_found = [w for _, w, _, _ in real_entries]
+            if attempt == 0:
+                print(f"[BOOT] OCR words: {words_found}")
+
+            # Check if vehicle menu is open
+            if any(w in _MENU_MARKERS for w in words_found):
+                menu_detected = True
+
+            for idx, word, cy, wh in real_entries:
+                if word != 'boot':
+                    continue
+                # Words on the same visual line: y-centre within half-height
+                tolerance = max(wh, 20)
+                neighbours = [
+                    w for _, w, wy, _ in real_entries
+                    if abs(wy - cy) < tolerance and w != 'boot'
+                ]
+                if not neighbours:
+                    x = roi_x + int(data['left'][idx] / scale + data['width'][idx] / scale / 2)
+                    y = roi_y + int(data['top'][idx] / scale + data['height'][idx] / scale / 2)
+                    abs_x = region['left'] + x
+                    abs_y = region['top'] + y
+                    print(f"[BOOT] Found standalone 'Boot' at ({abs_x}, {abs_y}), clicking...")
+                    pydirectinput.click(abs_x, abs_y)
+                    time.sleep(0.5)
+                    return True
+                else:
+                    print(f"[BOOT] Skipping 'Boot' near: {neighbours}")
+
+            print(f"[BOOT] 'Boot' text not found (attempt {attempt + 1}/{retries})")
+            time.sleep(1.0)
+
+        # Fallback: menu is open but "Boot" OCR failed — click expected position
+        if menu_detected:
+            print("[BOOT] Menu detected but 'Boot' not readable — using positional fallback")
+            # "Boot" is the 6th item in the menu (0-indexed: 5), positioned at ~55% down
+            # the menu area. Menu is roughly at x=55-65%, y=38-62% of screen.
+            h, w = img.shape[:2]
+            # Boot row: approximately 55% of screen height
+            fallback_x = int(w * 0.60)
+            fallback_y = int(h * 0.555)
+            abs_x = region['left'] + fallback_x
+            abs_y = region['top'] + fallback_y
+            print(f"[BOOT] Clicking fallback position ({abs_x}, {abs_y})...")
+            pydirectinput.click(abs_x, abs_y)
+            time.sleep(0.5)
+            return True
+
+        return False
+
+    def _wait_for_boot_ui(self, capture, region, timeout=10.0):
+        """Wait until 'VEHICLE BOOT' appears and 'Loading' disappears."""
+        start = time.perf_counter()
+        attempt = 0
+        while time.perf_counter() - start < timeout:
+            attempt += 1
+            img = self._grab_screen(capture, region)
+            # Right half, upper portion — where the "VEHICLE BOOT" header appears
+            roi, _, _ = self._crop_roi(img, (0.45, 0.95), (0.0, 0.40))
+            thresh, _scale = self._ocr_preprocess(roi)
+
+            try:
+                text = pytesseract.image_to_string(thresh, config='--psm 6 --oem 3')
+            except Exception as e:
+                print(f"[BOOT] OCR error on attempt {attempt}: {e}")
+                time.sleep(0.5)
+                continue
+
+            text_upper = text.upper()
+            has_vehicle_boot = 'VEHICLE BOOT' in text_upper
+            has_loading = 'LOADING' in text_upper
+
+            text_summary = ' | '.join(
+                line.strip() for line in text.split('\n') if line.strip()
+            )
+            print(f"[BOOT] UI check #{attempt}: "
+                  f"VEHICLE_BOOT={has_vehicle_boot} LOADING={has_loading} "
+                  f"text=[{text_summary}]")
+
+            if has_vehicle_boot and not has_loading:
+                print("[BOOT] Boot UI is open and loaded")
+                return True
+
+            if has_vehicle_boot and has_loading:
+                print("[BOOT] Boot is loading...")
+
+            time.sleep(0.5)
+
+        print("[BOOT] Timeout waiting for boot UI")
+        return False
+
+    def _get_grid_slot(self, img, region):
+        """Return the (x, y) image-relative center of the target inventory cell.
+
+        Uses proportional coordinates which scale with any resolution since the
+        game UI scales uniformly.  Cell size/position is expressed as fractions
+        of the captured window dimensions.
+        """
+        current_size = (region['width'], region['height'])
+        if self._cached_slot is not None and self._cached_window_size == current_size:
+            return self._cached_slot
+
+        h, w = img.shape[:2]
+        # Grid origin and cell size as fractions — resolution-agnostic
+        grid_x0 = int(w * 0.198)
+        grid_y0 = int(h * 0.355)
+        cell_w = int(w * 0.056)
+        cell_h = int(h * 0.088)
+        cx = grid_x0 + INVENTORY_COL * cell_w + cell_w // 2
+        cy = grid_y0 + INVENTORY_ROW * cell_h + cell_h // 2
+
+        if 0 < cx < w and 0 < cy < h:
+            self._cached_slot = (cx, cy)
+            self._cached_window_size = current_size
+            print(f"[BOOT] Grid slot at ({cx}, {cy}) for "
+                  f"row={INVENTORY_ROW + 1}, col={INVENTORY_COL + 1}")
+            return (cx, cy)
+        return None
+
+    def _transfer_items(self, capture, region, pydirectinput):
+        """Shift+click the inventory slot BOOT_OFFLOAD_CLICKS times."""
+        img = self._grab_screen(capture, region)
+        slot = self._get_grid_slot(img, region)
+        if slot is None:
+            print("[BOOT] Could not determine grid slot position")
+            return
+
+        abs_x = region['left'] + slot[0]
+        abs_y = region['top'] + slot[1]
+
+        print(f"[BOOT] Shift+clicking ({abs_x}, {abs_y}) x{BOOT_OFFLOAD_CLICKS} "
+              f"(delay={BOOT_OFFLOAD_CLICK_DELAY}s)...")
+        for i in range(BOOT_OFFLOAD_CLICKS):
+            pydirectinput.keyDown('shift')
+            time.sleep(0.05)
+            pydirectinput.click(abs_x, abs_y)
+            time.sleep(0.05)
+            pydirectinput.keyUp('shift')
+            if i < BOOT_OFFLOAD_CLICKS - 1:
+                time.sleep(BOOT_OFFLOAD_CLICK_DELAY)
+
+        print(f"[BOOT] Transferred {BOOT_OFFLOAD_CLICKS} items")
