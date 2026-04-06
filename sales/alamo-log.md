@@ -119,3 +119,7 @@ Broadbill	2
 Southern Garfish	3
 Golden Perch	1
 --sold
+Sandy Sprat	1
+Sandy Sprat	1
+Sandy Sprat	1
+Sandy Sprat	1

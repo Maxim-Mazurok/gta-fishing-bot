@@ -43,6 +43,20 @@ BOOT_OFFLOAD_CLICKS = int(os.environ.get('BOOT_OFFLOAD_CLICKS', '20'))
 # Delay in seconds between each shift+click (default: 1s).
 BOOT_OFFLOAD_CLICK_DELAY = float(os.environ.get('BOOT_OFFLOAD_CLICK_DELAY', '1.0'))
 
+# --- Boot load settings (env-configurable) ---
+# Enable boot load mode: take items FROM vehicle boot INTO personal inventory.
+BOOT_LOAD_ENABLED = os.environ.get('BOOT_LOAD_ENABLED', 'false').lower() in ('1', 'true', 'yes')
+# Target item count in inventory cell — stop loading when this is reached.
+BOOT_LOAD_TARGET_COUNT = int(os.environ.get('BOOT_LOAD_TARGET_COUNT', '200'))
+# Which cell in the vehicle boot (right grid) to shift+click FROM (1-indexed).
+BOOT_LOAD_BOOT_ROW = int(os.environ.get('BOOT_LOAD_BOOT_ROW', '1')) - 1
+BOOT_LOAD_BOOT_COL = int(os.environ.get('BOOT_LOAD_BOOT_COL', '1')) - 1
+# Which cell in personal inventory (left grid) to monitor count ON (1-indexed).
+BOOT_LOAD_INV_ROW = int(os.environ.get('BOOT_LOAD_INV_ROW', '1')) - 1
+BOOT_LOAD_INV_COL = int(os.environ.get('BOOT_LOAD_INV_COL', '4')) - 1
+# Delay in seconds between each shift+click.
+BOOT_LOAD_CLICK_DELAY = float(os.environ.get('BOOT_LOAD_CLICK_DELAY', '1.0'))
+
 # When boot offload is active, disable regular per-catch inventory clicking.
 if BOOT_OFFLOAD_ENABLED and INVENTORY_ENABLED:
     print("[INV] Boot offload enabled — disabling regular inventory clicking")
@@ -562,3 +576,199 @@ class BootOffloadHandler:
                 time.sleep(BOOT_OFFLOAD_CLICK_DELAY)
 
         print(f"[BOOT] Transferred {BOOT_OFFLOAD_CLICKS} items")
+
+
+class BootLoadHandler(BootOffloadHandler):
+    """Takes items from vehicle boot (right grid) into personal inventory (left grid).
+
+    Opens the boot UI (or detects it already open), then shift+clicks a
+    configured cell in the vehicle boot grid until the item count in the
+    monitored personal inventory cell reaches the target.
+    """
+
+    # Vehicle boot grid origin as fraction of window size.
+    # Same cell dimensions as the left (personal inventory) grid.
+    BOOT_GRID_X0_FRAC = 0.558
+    BOOT_GRID_Y0_FRAC = 0.355
+    # Left (personal inventory) grid — same as BootOffloadHandler
+    INV_GRID_X0_FRAC = 0.198
+    INV_GRID_Y0_FRAC = 0.355
+    CELL_W_FRAC = 0.053
+    CELL_H_FRAC = 0.088
+
+    def perform_load(self, capture, pydirectinput):
+        """Execute the boot load sequence.
+
+        Returns True if the load succeeded, False if any step failed.
+        """
+        region = capture._region
+        print(f"[BOOT-LOAD] Starting load (target count: {BOOT_LOAD_TARGET_COUNT}, "
+              f"boot cell: row={BOOT_LOAD_BOOT_ROW + 1} col={BOOT_LOAD_BOOT_COL + 1}, "
+              f"inv cell: row={BOOT_LOAD_INV_ROW + 1} col={BOOT_LOAD_INV_COL + 1})...")
+
+        # Check if boot is already open
+        boot_already_open = self._is_boot_open(capture, region)
+
+        if boot_already_open:
+            print("[BOOT-LOAD] Boot UI already open, skipping menu interaction")
+        else:
+            # Step 1: Press "e" to open interaction menu
+            print("[BOOT-LOAD] Opening interaction menu (pressing 'e')...")
+            pydirectinput.press('e')
+            time.sleep(1.0)
+
+            # Step 2: Find "Boot" text via OCR and click it
+            if not self._find_and_click_boot(capture, region, pydirectinput):
+                print("[BOOT-LOAD] Could not find 'Boot' option")
+                pydirectinput.press('e')
+                time.sleep(0.5)
+                return False
+
+            # Step 3: Wait for boot UI to fully load
+            if not self._wait_for_boot_ui(capture, region):
+                print("[BOOT-LOAD] Boot UI did not open properly")
+                pydirectinput.press('e')
+                time.sleep(0.5)
+                return False
+
+        # Step 4: Transfer items from boot to inventory
+        self._load_items(capture, region, pydirectinput)
+
+        # Step 5: Close boot
+        print("[BOOT-LOAD] Closing boot (pressing Escape)...")
+        pydirectinput.press('escape')
+        time.sleep(1.0)
+
+        print("[BOOT-LOAD] Load complete!")
+        return True
+
+    def _is_boot_open(self, capture, region):
+        """Check if the boot UI is currently visible."""
+        img = self._grab_screen(capture, region)
+        roi, _, _ = self._crop_roi(img, (0.45, 0.95), (0.0, 0.40))
+        thresh, _ = self._ocr_preprocess(roi)
+        try:
+            text = pytesseract.image_to_string(thresh, config='--psm 6 --oem 3')
+        except Exception:
+            return False
+        return 'VEHICLE BOOT' in text.upper()
+
+    def _get_boot_grid_slot(self, img, row, col):
+        """Return (x, y) image-relative center of a vehicle boot grid cell."""
+        h, w = img.shape[:2]
+        x0 = int(w * self.BOOT_GRID_X0_FRAC)
+        y0 = int(h * self.BOOT_GRID_Y0_FRAC)
+        cw = int(w * self.CELL_W_FRAC)
+        ch = int(h * self.CELL_H_FRAC)
+        cx = x0 + col * cw + cw // 2
+        cy = y0 + row * ch + ch // 2
+        if 0 < cx < w and 0 < cy < h:
+            return (cx, cy)
+        return None
+
+    def _read_inv_count(self, img, row, col):
+        """OCR the item count number at the bottom of a personal inventory cell.
+
+        Returns the count as an integer, or None if OCR fails.
+        """
+        h, w = img.shape[:2]
+        grid_x0 = w * self.INV_GRID_X0_FRAC
+        grid_y0 = h * self.INV_GRID_Y0_FRAC
+        cell_w = w * self.CELL_W_FRAC
+        cell_h = h * self.CELL_H_FRAC
+
+        # Count text is at the very bottom of the cell
+        x1 = int(grid_x0 + col * cell_w - cell_w * 0.1)
+        x2 = int(grid_x0 + (col + 1) * cell_w + cell_w * 0.1)
+        y1 = int(grid_y0 + row * cell_h + cell_h * 0.60)
+        y2 = int(grid_y0 + (row + 1) * cell_h + cell_h * 0.10)
+
+        # Clamp to image bounds
+        x1, x2 = max(0, x1), min(w, x2)
+        y1, y2 = max(0, y1), min(h, y2)
+
+        roi = img[y1:y2, x1:x2]
+        if roi.size == 0:
+            return None
+
+        # Upscale for reliable OCR on small text
+        thresh, _ = self._ocr_preprocess(roi, target_width=300)
+
+        try:
+            text = pytesseract.image_to_string(
+                thresh,
+                config='--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789',
+            )
+        except Exception as e:
+            print(f"[BOOT-LOAD] OCR error reading count: {e}")
+            return None
+
+        digits = ''.join(c for c in text if c.isdigit())
+        if digits:
+            return int(digits)
+        return None
+
+    def _load_items(self, capture, region, pydirectinput):
+        """Shift+click boot grid cell until inventory count reaches target."""
+        img = self._grab_screen(capture, region)
+        boot_slot = self._get_boot_grid_slot(img, BOOT_LOAD_BOOT_ROW, BOOT_LOAD_BOOT_COL)
+        if boot_slot is None:
+            print("[BOOT-LOAD] Could not determine boot grid slot position")
+            return
+
+        abs_x = region['left'] + boot_slot[0]
+        abs_y = region['top'] + boot_slot[1]
+        print(f"[BOOT-LOAD] Boot slot at ({abs_x}, {abs_y}), "
+              f"row={BOOT_LOAD_BOOT_ROW + 1} col={BOOT_LOAD_BOOT_COL + 1}")
+
+        # Read initial count
+        count = self._read_inv_count(img, BOOT_LOAD_INV_ROW, BOOT_LOAD_INV_COL)
+        print(f"[BOOT-LOAD] Initial inventory count: {count} "
+              f"(target: {BOOT_LOAD_TARGET_COUNT})")
+
+        if count is not None and count >= BOOT_LOAD_TARGET_COUNT:
+            print("[BOOT-LOAD] Already at target!")
+            return
+
+        max_clicks = 200
+        clicks = 0
+        unchanged_streak = 0
+        prev_count = count
+
+        while clicks < max_clicks:
+            # Shift+click the boot cell
+            pydirectinput.keyDown('shift')
+            time.sleep(0.05)
+            pydirectinput.click(abs_x, abs_y)
+            time.sleep(0.05)
+            pydirectinput.keyUp('shift')
+            clicks += 1
+
+            # Wait for UI to update
+            time.sleep(BOOT_LOAD_CLICK_DELAY)
+
+            # Read updated count
+            img = self._grab_screen(capture, region)
+            count = self._read_inv_count(img, BOOT_LOAD_INV_ROW, BOOT_LOAD_INV_COL)
+            print(f"[BOOT-LOAD] Click #{clicks}: count={count}")
+
+            if count is not None and count >= BOOT_LOAD_TARGET_COUNT:
+                print(f"[BOOT-LOAD] Target reached! "
+                      f"({count} >= {BOOT_LOAD_TARGET_COUNT})")
+                return
+
+            # Detect stalls (only when OCR succeeds for both readings)
+            if count is not None and prev_count is not None:
+                if count == prev_count:
+                    unchanged_streak += 1
+                    if unchanged_streak >= 3:
+                        print(f"[BOOT-LOAD] Count unchanged for "
+                              f"{unchanged_streak} clicks, stopping")
+                        return
+                else:
+                    unchanged_streak = 0
+
+            if count is not None:
+                prev_count = count
+
+        print(f"[BOOT-LOAD] Reached max clicks ({max_clicks})")

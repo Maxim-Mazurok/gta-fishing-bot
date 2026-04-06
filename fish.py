@@ -49,6 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', help='Show debug visualization')
     parser.add_argument('--reel', action='store_true', help='Reel-only mode: skip casting, just search for minigame and play it')
     parser.add_argument('--offload', action='store_true', help='Run a single boot offload immediately and exit')
+    parser.add_argument('--load', action='store_true', help='Run a single boot load (take items from vehicle boot) and exit')
     parser.add_argument('--test', type=str, help='Test detection on image file or frame directory')
     args = parser.parse_args()
 
@@ -57,5 +58,8 @@ if __name__ == '__main__':
     elif args.offload:
         from automation import run_boot_offload
         run_boot_offload()
+    elif args.load:
+        from automation import run_boot_load
+        run_boot_load()
     else:
         run_automation(debug=args.debug, reel_only=args.reel)

@@ -28,7 +28,7 @@ from config import (
 from detection import BarDetector
 from capture import ScreenCapture, find_game_window
 from control import FishingController, GameState
-from inventory import InventoryHandler, BootOffloadHandler, BOOT_OFFLOAD_ENABLED, BOOT_OFFLOAD_INTERVAL
+from inventory import InventoryHandler, BootOffloadHandler, BootLoadHandler, BOOT_OFFLOAD_ENABLED, BOOT_OFFLOAD_INTERVAL
 from projection_calibration import (
     PROJECTION_TIMING_WINDOW_FRAMES,
     resolve_projection_outcome,
@@ -1226,6 +1226,37 @@ def run_boot_offload():
     handler = BootOffloadHandler()
     ok = handler.perform_offload(capture, pydirectinput)
     print(f"[*] Offload {'succeeded' if ok else 'FAILED'}")
+    sys.exit(0 if ok else 1)
+
+
+def run_boot_load():
+    """Run a single boot load immediately and exit."""
+    global pydirectinput
+    import pydirectinput as pdi
+    pydirectinput = pdi
+    pydirectinput.FAILSAFE = True
+
+    game_win = find_game_window('fivem')
+    if game_win:
+        print(f"[*] Found game window: {game_win['title'][:60]}")
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = game_win['hwnd']
+            user32.ShowWindow(hwnd, 9)
+            user32.SetForegroundWindow(hwnd)
+            print("[*] Game window focused. Starting load in 1s...")
+            time.sleep(1.0)
+        except Exception:
+            print("[!] Could not focus window. Starting in 3s...")
+            time.sleep(3.0)
+    else:
+        print("[!] FiveM window not found, using primary monitor. Starting in 3s...")
+        time.sleep(3.0)
+
+    capture = ScreenCapture(game_window=game_win)
+    handler = BootLoadHandler()
+    ok = handler.perform_load(capture, pydirectinput)
+    print(f"[*] Load {'succeeded' if ok else 'FAILED'}")
     sys.exit(0 if ok else 1)
 
 

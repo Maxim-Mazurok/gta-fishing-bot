@@ -159,3 +159,6 @@ Black Bream	1
 Wahoo	1
 Wahoo	1
 Cod	1
+Sand Whiting	1
+Sand Whiting	1
+Sand Whiting	1

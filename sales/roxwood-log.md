@@ -28,3 +28,39 @@ Silver Perch  4
 Australian Herring  8
 Ocean Jacket  3
 Brown Trout  3
+Dungeness Crab	1
+Dungeness Crab	1
+Australian Herring	1
+Snapper	1
+Amberjack	1
+Silver Perch	1
+Snapper	1
+Red Snapper	1
+Dolphinfish	1
+Grenadier	1
+Ocean Perch	1
+Ocean Perch	1
+Ocean Perch	1
+Ocean Perch	1
+Silver Perch	1
+Dungeness Crab	1
+Ocean Perch	1
+Gummy Shark	1
+Australian Herring	1
+Brown Trout	1
+Grenadier	1
+Silver Perch	1
+Dungeness Crab	1
+Ocean Perch	1
+Grouper	1
+Australian Herring	1
+King Mackerel	1
+Grouper	1
+Silver Perch	1
+Ocean Jacket	1
+Snapper	1
+Red Snapper	1
+Gummy Shark	1
+Ocean Perch	1
+Gummy Shark	1
+Gummy Shark	1
