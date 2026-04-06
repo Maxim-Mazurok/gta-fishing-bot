@@ -565,9 +565,11 @@ def _check_you_caught_text(capture):
         return None
 
     # Match "You caught <fish name>!" (case-insensitive)
-    m = re.search(r'[Yy]ou\s+caught\s+(.+?)[\s!]*$', text, re.MULTILINE)
+    m = re.search(r'[Yy]ou\s+caught\s+(.+?)[\.!]*$', text, re.MULTILINE)
     if m:
-        fish_name = m.group(1).strip().rstrip('!').strip()
+        fish_name = m.group(1).strip()
+        # Strip trailing punctuation, digits, and whitespace (OCR artifacts)
+        fish_name = re.sub(r'[\s!.,:;\d]+$', '', fish_name).strip()
         # Strip leading article "a " or "an "
         fish_name = re.sub(r'^[Aa]n?\s+', '', fish_name)
         if len(fish_name) >= 2:
@@ -600,8 +602,41 @@ def _fish_location(name):
     return "Unknown"
 
 
+def _normalize_fish_name(raw_name):
+    """Try to match OCR fish name to a known fish in PRICES.
+
+    Returns the canonical name if found, otherwise the original.
+    Uses exact → case-insensitive → prefix → edit-distance matching.
+    """
+    if raw_name in PRICES:
+        return raw_name
+    # Case-insensitive match
+    lower = raw_name.lower()
+    for known in PRICES:
+        if known.lower() == lower:
+            return known
+    # Check if known name is a substring (OCR may append garbage)
+    for known in PRICES:
+        if lower.startswith(known.lower()):
+            return known
+    # Fuzzy match using edit distance (for OCR typos like Trumpettish→Trumpetfish)
+    from difflib import SequenceMatcher
+    best_match = None
+    best_ratio = 0.0
+    for known in PRICES:
+        ratio = SequenceMatcher(None, lower, known.lower()).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_match = known
+    if best_ratio >= 0.7 and best_match is not None:
+        print(f"[*] Fuzzy matched \"{raw_name}\" → \"{best_match}\" ({best_ratio:.0%})")
+        return best_match
+    return raw_name
+
+
 def _log_fish_catch(fish_name):
     """Append a caught fish to the appropriate area log file."""
+    fish_name = _normalize_fish_name(fish_name)
     location = _fish_location(fish_name)
     key = _LOCATION_TO_KEY.get(location)
     if not key:

@@ -21,3 +21,4 @@ live_debug_runs
 live_physics_calibration/
 diag_blue_gone/
 annotated_live_crops/
+weights/processed_manifest.txt

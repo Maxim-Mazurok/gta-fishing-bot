@@ -149,3 +149,13 @@ Triggerfish	1
 Triggerfish	1
 Escolar	1
 Murray Cod	1
+Trumpetfish	1
+Chadfin	1
+Murray Cod	1
+Musky	1
+Sand Whiting	1
+Cod	1
+Black Bream	1
+Wahoo	1
+Wahoo	1
+Cod	1

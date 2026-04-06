@@ -279,8 +279,11 @@ def _compute_model_sale_value(region_name: str, counts: Counter) -> float:
     """Compute model-based $/fish (sales) for a single location.
 
     For each fish, uses the model probability instead of observed frequency.
+    Special fish (no tier template) use observed frequency since they are
+    zone-independent and we can only know they're catchable where we've seen them.
     """
     model_value = 0.0
+    total_fish = sum(counts.values())
 
     for fish_name in counts:
         if fish_name not in PRICES:
@@ -289,6 +292,11 @@ def _compute_model_sale_value(region_name: str, counts: Counter) -> float:
         probability = model_fish_probability(fish_name, region_name, counts)
         if probability is not None:
             model_value += probability * price
+        else:
+            # Special fish (stars >= 4 or 0): use observed frequency
+            _price, star_count, _color = PRICES[fish_name]
+            if star_count >= 4 or star_count == 0:
+                model_value += (counts[fish_name] / total_fish) * price
 
     return model_value
 

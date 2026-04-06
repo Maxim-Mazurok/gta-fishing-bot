@@ -239,19 +239,37 @@ def process_images(image_paths: list[str]) -> dict[str, int]:
     return all_weights
 
 
+def load_manifest(manifest_path: Path) -> set[str]:
+    """Load set of already-processed filenames from manifest."""
+    if not manifest_path.exists():
+        return set()
+    return set(line.strip() for line in manifest_path.read_text().splitlines() if line.strip())
+
+
+def save_manifest(manifest_path: Path, processed: set[str]) -> None:
+    """Save processed filenames to manifest."""
+    manifest_path.write_text("\n".join(sorted(processed)) + "\n")
+
+
 def main():
     weights_dir = Path(__file__).parent
+    manifest_path = weights_dir / "processed_manifest.txt"
 
     if len(sys.argv) > 1:
         image_paths = sys.argv[1:]
     else:
-        image_paths = sorted(str(p) for p in weights_dir.glob("*.png"))
+        all_paths = sorted(str(p) for p in weights_dir.glob("*.png"))
+        already_processed = load_manifest(manifest_path)
+        image_paths = [p for p in all_paths if Path(p).name not in already_processed]
+        skipped = len(all_paths) - len(image_paths)
+        if skipped:
+            print(f"Skipping {skipped} already-processed image(s)")
 
     if not image_paths:
-        print("No images found. Place PNG screenshots in the weights/ folder.")
+        print("No new images found.")
         return
 
-    print(f"Found {len(image_paths)} image(s)")
+    print(f"Found {len(image_paths)} new image(s)")
 
     extracted = process_images(image_paths)
 
@@ -278,6 +296,12 @@ def main():
         print("\nUpdated FISH_WEIGHTS in sales/constants.py")
     else:
         print("\nNo new entries to add.")
+
+    # Update manifest with processed filenames
+    if len(sys.argv) <= 1:
+        already_processed = load_manifest(manifest_path)
+        already_processed.update(Path(p).name for p in image_paths)
+        save_manifest(manifest_path, already_processed)
 
 
 def update_constants_file(merged_weights: dict[str, int]) -> None:

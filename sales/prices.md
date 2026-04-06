@@ -20,7 +20,7 @@ Heavy storm weather may increase chances.
 
 | Fish                 |   Price | Stars       | Sightings                                                                                                                        |
 |----------------------|--------:|-------------|----------------------------------------------------------------------------------------------------------------------------------|
-| Chadfin              |  $8,150 | -           |                                                                                                                                  |
+| Chadfin              |  $8,150 | -           | Dam                                                                                                                              |
 | 3 Eyed Fish          | $10,000 | xxxx purple | Alamo Sea (heavy storm in alamo, nothing special in roxwood tho), Roxwood (heavy storm in alamo, nothing special in roxwood tho) |
 | Pufferfish w/ Carrot | $10,000 | xxxx purple |                                                                                                                                  |
 | Baby Pufferfish      | $10,000 | xxxx purple |                                                                                                                                  |
