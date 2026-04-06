@@ -65,7 +65,7 @@ Heavy storm weather may increase chances.
 | Australian Herring   |  $1,650 | x           | Roxwood     |
 | Morwhong             |  $1,350 | x           | Alamo Sea   |
 | Yellow Tail          |  $2,150 | xx          | Ocean       |
-| Anglerfish           |  $2,650 | xxx         | Cave        |
+| Angler Fish          |  $2,650 | xxx         | Cave        |
 | Viperfish            |  $2,000 | x           | Cave        |
 | Australian Anchovy   |  $1,850 | x           | Ocean       |
 | Sculpin              |  $2,000 | x           | Cave        |

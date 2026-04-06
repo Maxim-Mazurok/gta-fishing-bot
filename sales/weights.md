@@ -138,7 +138,7 @@ Average $/gram per location, weighted by drop rates. Uses known weights where av
 | Sailfish | $2,850 | xxx green | Humane Labs | - |
 | Whale Shark | $2,850 | xxx green | Humane Labs | Gold Multizone #2 |
 | Yellowfin Tuna | $2,850 | xxx green | Humane Labs | - |
-| Anglerfish | $2,650 | xxx | Cave | - |
+| Angler Fish | $2,650 | xxx | Cave | - |
 | Blobfish | $2,650 | xxx | Cave | Gold Multizone #2 |
 | King Whiting | $2,650 | xxx | Cave | - |
 | Archerfish | $2,500 | xx green | Humane Labs | - |

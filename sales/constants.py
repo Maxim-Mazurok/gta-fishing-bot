@@ -70,7 +70,7 @@ PRICES: dict[str, tuple[int, int, str]] = {
     "Australian Herring": (1650, 1, ""),
     "Morwhong": (1350, 1, ""),
     "Yellow Tail": (2150, 2, ""),
-    "Anglerfish": (2650, 3, ""),
+    "Angler Fish": (2650, 3, ""),
     "Viperfish": (2000, 1, ""),
     "Australian Anchovy": (1850, 1, ""),
     "Sculpin": (2000, 1, ""),
